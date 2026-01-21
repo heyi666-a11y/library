@@ -37,7 +37,7 @@
    ```
 3. 关联GitHub仓库（使用您提供的访问代币）：
    ```bash
-   git remote add origin https://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@github.com/your-username/bdzx-official-website.git
+   git remote add origin https://your-github-token@github.com/your-username/bdzx-official-website.git
    ```
    请将 `your-username` 替换为您的GitHub用户名
 4. 推送代码：
