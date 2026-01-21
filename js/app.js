@@ -21,33 +21,32 @@ const adminPages = document.querySelectorAll('.admin-page');
 async function initData() {
     try {
         // 从Supabase获取数据
+        console.log('开始初始化数据...');
         announcements = await announcementService.getAllAnnouncements();
+        console.log('公告数据加载成功');
         books = await bookService.getAllBooks();
+        console.log('图书数据加载成功');
         readers = await readerService.getAllReaders();
+        console.log('读者数据加载成功');
         borrowRecords = await borrowRecordService.getAllBorrowRecords();
+        console.log('借阅记录数据加载成功');
+        console.log('数据初始化成功');
     } catch (error) {
         console.error('初始化数据失败:', error);
-        // 如果获取失败，使用默认数据
-        console.log('使用默认数据');
-        announcements = [
-            { id: 1, title: '图书馆开馆通知', content: '图书馆将于2024年12月20日正式开馆，欢迎广大师生前来借阅。', date: '2024-12-15' },
-            { id: 2, title: '新书推荐', content: '近期新增了一批计算机类图书，包括JavaScript高级程序设计等经典著作。', date: '2024-12-10' }
-        ];
+        // 初始化空数组，避免系统崩溃
+        announcements = [];
+        books = [];
+        readers = [];
+        borrowRecords = [];
         
-        books = [
-            { id: 1, title: 'JavaScript高级程序设计', author: 'Nicholas C. Zakas', isbn: '9787115421880', category: '计算机', publisher: '人民邮电出版社', status: 'in', copies: 5, available: 5 },
-            { id: 2, title: 'CSS权威指南', author: 'Eric A. Meyer', isbn: '9787115526247', category: '计算机', publisher: '人民邮电出版社', status: 'in', copies: 3, available: 2 },
-            { id: 3, title: 'HTML5与CSS3权威指南', author: '陆凌牛', isbn: '9787115407304', category: '计算机', publisher: '人民邮电出版社', status: 'in', copies: 4, available: 4 }
-        ];
-        
-        readers = [
-            { id: '20210001', name: '张三', grade: '高一', class: '1班', borrowCount: 2, overdueCount: 0 },
-            { id: '20210002', name: '李四', grade: '高一', class: '1班', borrowCount: 1, overdueCount: 1 }
-        ];
-        
-        borrowRecords = [
-            { id: 1, studentId: '20210001', studentName: '张三', bookId: 2, bookTitle: 'CSS权威指南', borrowDate: '2024-12-01', dueDate: '2025-01-01', returnDate: null, status: 'borrowed' }
-        ];
+        // 检查是否是表不存在的错误
+        if (error.code === 'PGRST205') {
+            // 改为console.error，避免阻塞代码执行
+            console.error('数据库表不存在，请先在Supabase控制台执行supabase-schema.sql脚本创建表结构。\n\n错误详情：', error);
+        } else {
+            // 改为console.error，避免阻塞代码执行
+            console.error('数据初始化失败，请检查网络连接或Supabase配置。\n\n错误详情：', error);
+        }
     }
 }
 
@@ -166,7 +165,7 @@ async function adminLogin() {
         isAdmin = true;
         showPage('admin-home');
         showAdminPage('dashboard');
-        initCharts();
+        generateTextStats();
         initBookList();
         initReaderTree();
         initRecordsList();
@@ -363,11 +362,17 @@ function performBookSearch() {
 // 改进的借书功能
 async function confirmBorrow() {
     const studentId = document.getElementById('borrow-student-id').value;
+    const studentName = document.getElementById('borrow-student-name').value;
     const bookTitle = document.getElementById('borrow-book-title').value;
     const bookIsbn = document.getElementById('borrow-book-isbn').value;
     
     if (!studentId) {
-        alert('请输入学号/校卡');
+        alert('请输入学号');
+        return;
+    }
+    
+    if (!studentName) {
+        alert('请输入姓名');
         return;
     }
     
@@ -377,11 +382,23 @@ async function confirmBorrow() {
     }
     
     try {
-        // 查找学生
-        const student = readers.find(r => r.id === studentId);
+        // 查找或创建学生
+        let student = readers.find(r => r.id === studentId);
         if (!student) {
-            alert('学生不存在');
-            return;
+            // 创建新学生
+            const newStudent = {
+                id: studentId,
+                name: studentName,
+                borrow_count: 0,
+                overdue_count: 0
+            };
+            
+            // 保存到数据库
+            await readerService.addReader(newStudent);
+            
+            // 添加到本地数据
+            readers.push(newStudent);
+            student = newStudent;
         }
         
         // 查找图书
@@ -398,7 +415,7 @@ async function confirmBorrow() {
         }
         
         // 检查借阅数量限制
-        const currentBorrows = borrowRecords.filter(r => r.studentId === studentId && r.returnDate === null);
+        const currentBorrows = borrowRecords.filter(r => r.student_id === studentId && r.return_date === null);
         if (currentBorrows.length >= 5) {
             alert('已达到最大借阅数量（5本）');
             return;
@@ -435,9 +452,9 @@ async function confirmBorrow() {
         await borrowRecordService.addBorrowRecord(newRecord);
         
         // 3. 更新读者借阅次数
-        student.borrowCount++;
+        student.borrow_count++;
         await readerService.updateReader(studentId, {
-            borrow_count: student.borrowCount
+            borrow_count: student.borrow_count
         });
         
         // 更新本地数据
@@ -455,6 +472,7 @@ async function confirmBorrow() {
                 <p><strong>书名：</strong>${book.title}</p>
                 <p><strong>作者：</strong>${book.author}</p>
                 <p><strong>借阅人：</strong>${student.name}</p>
+                <p><strong>学号：</strong>${student.id}</p>
                 <p><strong>到期日期：</strong>${dueDate.toISOString().split('T')[0]}</p>
             </div>
         `;
@@ -463,14 +481,20 @@ async function confirmBorrow() {
         setTimeout(() => {
             bookPreview.innerHTML = '';
             document.getElementById('borrow-student-id').value = '';
+            document.getElementById('borrow-student-name').value = '';
             document.getElementById('borrow-book-title').value = '';
             document.getElementById('borrow-book-isbn').value = '';
         }, 3000);
         
+        // 刷新本地数据
+        await initData();
+        
         // 更新管理员界面数据
         if (isAdmin) {
             updateStats();
+            generateTextStats();
             initBookList();
+            initReaderTree();
             initRecordsList();
         }
         updateLibraryDisplay();
@@ -483,8 +507,14 @@ async function confirmBorrow() {
 
 // 改进的还书功能
 async function confirmReturn() {
+    const studentId = document.getElementById('return-student-id').value;
     const bookTitle = document.getElementById('return-book-title').value;
     const bookIsbn = document.getElementById('return-book-isbn').value;
+    
+    if (!studentId) {
+        alert('请输入学号');
+        return;
+    }
     
     if (!bookTitle && !bookIsbn) {
         alert('请输入书名或ISBN');
@@ -494,9 +524,10 @@ async function confirmReturn() {
     try {
         // 查找借阅记录
         const record = borrowRecords.find(r => {
-            const matchesTitle = bookTitle && r.bookTitle.toLowerCase().includes(bookTitle.toLowerCase());
-            const matchesIsbn = bookIsbn && r.bookId.toString() === bookIsbn;
-            return (matchesTitle || matchesIsbn) && r.returnDate === null;
+            const matchesStudentId = r.student_id === studentId;
+            const matchesTitle = bookTitle && r.book_title.toLowerCase().includes(bookTitle.toLowerCase());
+            const matchesIsbn = bookIsbn && r.book_id.toString() === bookIsbn;
+            return matchesStudentId && (matchesTitle || matchesIsbn) && r.return_date === null;
         });
         
         if (!record) {
@@ -505,7 +536,7 @@ async function confirmReturn() {
         }
         
         // 执行归还
-        const book = books.find(b => b.id === record.bookId);
+        const book = books.find(b => b.id === record.book_id);
         book.available++;
         if (book.status === 'out') {
             book.status = 'in';
@@ -527,19 +558,22 @@ async function confirmReturn() {
         });
         
         // 3. 更新读者借阅次数
-        const student = readers.find(r => r.id === record.studentId);
-        student.borrowCount--;
-        await readerService.updateReader(record.studentId, {
-            borrow_count: student.borrowCount
-        });
+        const student = readers.find(r => r.id === record.student_id);
+        if (student) {
+            student.borrow_count--;
+            await readerService.updateReader(record.student_id, {
+                borrow_count: student.borrow_count
+            });
+        }
         
         // 更新本地数据
-        record.returnDate = returnDate;
+        record.return_date = returnDate;
         record.status = 'returned';
         
         // 检查是否逾期
-        const dueDate = new Date(record.dueDate);
-        const isOverdue = returnDate > dueDate;
+        const dueDate = new Date(record.due_date);
+        const isOverdue = new Date(returnDate) > dueDate;
+        const overdueDays = isOverdue ? Math.floor((new Date(returnDate) - dueDate) / (1000 * 60 * 60 * 24)) : 0;
         
         // 更新界面显示
         const returnStatus = document.getElementById('return-status');
@@ -547,12 +581,12 @@ async function confirmReturn() {
             <div style="background: #e8f4f8; padding: 20px; border-radius: 10px; text-align: center;">
                 <i class="fas fa-check-circle" style="font-size: 48px; color: #27ae60; margin-bottom: 15px;"></i>
                 <h3>还书成功！</h3>
-                <p><strong>书名：</strong>${record.bookTitle}</p>
-                <p><strong>借阅人：</strong>${record.studentName}</p>
-                <p><strong>借阅日期：</strong>${record.borrowDate}</p>
-                <p><strong>到期日期：</strong>${record.dueDate}</p>
-                <p><strong>归还日期：</strong>${record.returnDate}</p>
-                ${isOverdue ? `<p style="color: #ff4757;">已逾期${Math.floor((returnDate - dueDate) / (1000 * 60 * 60 * 24))}天</p>` : ''}
+                <p><strong>书名：</strong>${record.book_title}</p>
+                <p><strong>借阅人：</strong>${record.student_name}</p>
+                <p><strong>借阅日期：</strong>${record.borrow_date}</p>
+                <p><strong>到期日期：</strong>${record.due_date}</p>
+                <p><strong>归还日期：</strong>${record.return_date}</p>
+                ${isOverdue ? `<p style="color: #ff4757;">已逾期${overdueDays}天</p>` : ''}
             </div>
         `;
         
@@ -563,10 +597,15 @@ async function confirmReturn() {
             document.getElementById('return-book-isbn').value = '';
         }, 3000);
         
+        // 刷新本地数据
+        await initData();
+        
         // 更新管理员界面数据
         if (isAdmin) {
             updateStats();
+            generateTextStats();
             initBookList();
+            initReaderTree();
             initRecordsList();
         }
         
@@ -597,11 +636,22 @@ function initBookList() {
                 <p>总数：${book.copies}</p>
             </div>
             <div class="book-actions">
-                <button class="btn btn-small btn-edit" onclick="editBook(${book.id})">编辑</button>
-                <button class="btn btn-small btn-delete" onclick="deleteBook(${book.id})">删除</button>
+                <button class="btn btn-small btn-edit" data-book-id="${book.id}">编辑</button>
+                <button class="btn btn-small btn-delete" data-book-id="${book.id}">删除</button>
             </div>
         </div>
     `).join('');
+    
+    // 添加事件委托处理编辑和删除按钮点击事件
+    bookList.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-edit')) {
+            const bookId = parseInt(e.target.getAttribute('data-book-id'));
+            editBook(bookId);
+        } else if (e.target.classList.contains('btn-delete')) {
+            const bookId = parseInt(e.target.getAttribute('data-book-id'));
+            deleteBook(bookId);
+        }
+    });
 }
 
 function addBook() {
@@ -617,13 +667,14 @@ async function confirmAddBook() {
     const publisher = document.getElementById('add-book-publisher').value;
     const copies = parseInt(document.getElementById('add-book-copies').value);
     
-    if (title && author && isbn && category && publisher && !isNaN(copies) && copies > 0) {
+    // 移除ISBN的必填验证
+    if (title && author && category && publisher && !isNaN(copies) && copies > 0) {
         try {
             // 使用Supabase服务添加图书
             const newBook = {
                 title: title,
                 author: author,
-                isbn: isbn,
+                isbn: isbn || '', // 允许空ISBN
                 category: category,
                 publisher: publisher,
                 status: 'in',
@@ -636,8 +687,12 @@ async function confirmAddBook() {
             // 更新本地数据
             books.push(addedBook);
             
+            // 刷新本地数据
+            await initData();
+            
             initBookList();
             updateStats();
+            generateTextStats();
             updateLibraryDisplay();
             
             // 关闭模态框并重置表单
@@ -756,40 +811,34 @@ function initReaderTree() {
     const readerTree = document.getElementById('reader-tree');
     const readerDetails = document.getElementById('reader-details');
     
-    // 按年级分组
-    const gradeGroups = {};
-    readers.forEach(reader => {
-        if (!gradeGroups[reader.grade]) {
-            gradeGroups[reader.grade] = {};
-        }
-        if (!gradeGroups[reader.grade][reader.class]) {
-            gradeGroups[reader.grade][reader.class] = [];
-        }
-        gradeGroups[reader.grade][reader.class].push(reader);
-    });
+    // 直接显示所有学生，按学号排序
+    const sortedReaders = readers.sort((a, b) => a.id.localeCompare(b.id));
     
-    readerTree.innerHTML = Object.keys(gradeGroups).map(grade => `
-        <div class="grade-group">
-            <div class="grade-header">${grade}</div>
-            ${Object.keys(gradeGroups[grade]).map(className => `
-                <div class="class-group">
-                    <div class="class-header">${className}</div>
-                    <div class="student-list">
-                        ${gradeGroups[grade][className].map(student => `
-                            <div class="student-item" onclick="showReaderDetails('${student.id}')">
-                                ${student.name} (${student.id})
-                            </div>
-                        `).join('')}
+    readerTree.innerHTML = `
+        <div class="student-list-container">
+            <h3>所有学生</h3>
+            <div class="student-list">
+                ${sortedReaders.map(student => `
+                    <div class="student-item" data-student-id="${student.id}">
+                        ${student.name} (${student.id})
                     </div>
-                </div>
-            `).join('')}
+                `).join('')}
+            </div>
         </div>
-    `).join('');
+    `;
     
     // 默认显示第一个读者的详细信息
     if (readers.length > 0) {
         showReaderDetails(readers[0].id);
     }
+    
+    // 绑定事件监听器
+    readerTree.querySelectorAll('.student-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const studentId = item.getAttribute('data-student-id');
+            showReaderDetails(studentId);
+        });
+    });
 }
 
 function showReaderDetails(studentId) {
@@ -797,26 +846,25 @@ function showReaderDetails(studentId) {
     if (!student) return;
     
     const readerDetails = document.getElementById('reader-details');
-    const studentBorrows = borrowRecords.filter(r => r.studentId === studentId);
-    const currentBorrows = studentBorrows.filter(r => r.returnDate === null);
-    const historyBorrows = studentBorrows.filter(r => r.returnDate !== null);
+    const studentBorrows = borrowRecords.filter(r => r.student_id === studentId);
+    const currentBorrows = studentBorrows.filter(r => r.return_date === null);
+    const historyBorrows = studentBorrows.filter(r => r.return_date !== null);
     
     readerDetails.innerHTML = `
         <div class="reader-info">
             <h3>${student.name}</h3>
             <p>学号：${student.id}</p>
-            <p>年级：${student.grade}</p>
-            <p>班级：${student.class}</p>
             <p>当前借阅：${currentBorrows.length}本</p>
-            <p>逾期次数：${student.overdueCount}次</p>
+            <p>逾期次数：${student.overdue_count}次</p>
         </div>
         
         <div class="reader-borrows">
             <h4>当前借阅</h4>
             ${currentBorrows.length > 0 ? currentBorrows.map(record => `
                 <div class="borrow-item">
-                    <p>${record.bookTitle}</p>
-                    <p>到期日期：${record.dueDate}</p>
+                    <p>${record.book_title}</p>
+                    <p>借阅日期：${record.borrow_date}</p>
+                    <p>到期日期：${record.due_date}</p>
                 </div>
             `).join('') : '<p>无当前借阅</p>'}
         </div>
@@ -825,35 +873,357 @@ function showReaderDetails(studentId) {
             <h4>历史借阅</h4>
             ${historyBorrows.length > 0 ? historyBorrows.slice(0, 5).map(record => `
                 <div class="borrow-item">
-                    <p>${record.bookTitle}</p>
-                    <p>借阅日期：${record.borrowDate}</p>
-                    <p>归还日期：${record.returnDate}</p>
+                    <p>${record.book_title}</p>
+                    <p>借阅日期：${record.borrow_date}</p>
+                    <p>归还日期：${record.return_date}</p>
                 </div>
             `).join('') : '<p>无历史借阅</p>'}
         </div>
     `;
 }
 
+// 导出借阅记录为CSV文件
+function exportBorrowRecords() {
+    // 确保borrowRecords是数组
+    const records = Array.isArray(borrowRecords) ? borrowRecords : [];
+    
+    if (records.length === 0) {
+        alert('没有可导出的借阅记录！');
+        return;
+    }
+    
+    // 生成CSV表头
+    const headers = ['图书名称', '读者姓名', '学号', '借阅日期', '到期日期', '归还日期', '状态'];
+    
+    // 生成CSV数据行
+    const rows = records.map(record => [
+        record.book_title || '未知图书',
+        record.student_name || '未知读者',
+        record.student_id || '未知学号',
+        record.borrow_date || '未知',
+        record.due_date || '未知',
+        record.return_date || '',
+        record.status === 'borrowed' ? '借阅中' : record.status === 'returned' ? '已归还' : '逾期'
+    ]);
+    
+    // 拼接CSV内容
+    const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    // 创建Blob对象并下载
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `借阅记录_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 导出图书数据为CSV文件
+function exportBooks() {
+    // 确保books是数组
+    const bookList = Array.isArray(books) ? books : [];
+    
+    if (bookList.length === 0) {
+        alert('没有可导出的图书数据！');
+        return;
+    }
+    
+    // 生成CSV表头
+    const headers = ['书名', '作者', 'ISBN', '分类', '出版社', '状态', '可用数量', '总数量'];
+    
+    // 生成CSV数据行
+    const rows = bookList.map(book => [
+        book.title || '未知书名',
+        book.author || '未知作者',
+        book.isbn || '',
+        book.category || '未分类',
+        book.publisher || '未知出版社',
+        book.status === 'in' ? '在馆' : '借出',
+        book.available || 0,
+        book.copies || 0
+    ]);
+    
+    // 拼接CSV内容
+    const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    // 创建Blob对象并下载
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `图书数据_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 导出读者数据为CSV文件
+function exportReaders() {
+    // 确保readers是数组
+    const readerList = Array.isArray(readers) ? readers : [];
+    
+    if (readerList.length === 0) {
+        alert('没有可导出的读者数据！');
+        return;
+    }
+    
+    // 生成CSV表头
+    const headers = ['学号', '姓名', '借阅次数', '逾期次数'];
+    
+    // 生成CSV数据行
+    const rows = readerList.map(reader => [
+        reader.id || '未知学号',
+        reader.name || '未知姓名',
+        reader.borrow_count || 0,
+        reader.overdue_count || 0
+    ]);
+    
+    // 拼接CSV内容
+    const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    // 创建Blob对象并下载
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `读者数据_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 // 借阅记录管理
 function initRecordsList() {
     const recordsList = document.getElementById('records-list');
     
-    recordsList.innerHTML = borrowRecords.map(record => `
+    // 确保borrowRecords是数组
+    const records = Array.isArray(borrowRecords) ? borrowRecords : [];
+    
+    recordsList.innerHTML = records.map(record => `
         <div class="record-item">
             <div class="record-info">
-                <p><strong>图书：</strong>${record.bookTitle}</p>
-                <p><strong>读者：</strong>${record.studentName} (${record.studentId})</p>
+                <p><strong>图书：</strong>${record.book_title || '未知图书'}</p>
+                <p><strong>读者：</strong>${record.student_name || '未知读者'} (${record.student_id || '未知学号'})</p>
             </div>
             <div class="record-dates">
-                <p><strong>借阅日期：</strong>${record.borrowDate}</p>
-                <p><strong>到期日期：</strong>${record.dueDate}</p>
-                ${record.returnDate ? `<p><strong>归还日期：</strong>${record.returnDate}</p>` : ''}
+                <p><strong>借阅日期：</strong>${record.borrow_date || '未知'}</p>
+                <p><strong>到期日期：</strong>${record.due_date || '未知'}</p>
+                ${record.return_date ? `<p><strong>归还日期：</strong>${record.return_date}</p>` : ''}
             </div>
             <div class="record-status">
                 <p class="status-${record.status}">${record.status === 'borrowed' ? '借阅中' : record.status === 'returned' ? '已归还' : '逾期'}</p>
             </div>
         </div>
     `).join('');
+    
+    // 添加导出报表按钮事件监听
+    const exportButton = document.querySelector('#records .page-actions .btn-secondary');
+    if (exportButton) {
+        exportButton.addEventListener('click', exportBorrowRecords);
+    }
+}
+
+// 批量导入功能
+
+// 添加ISBN输入行
+function addIsbnRow() {
+    const container = document.getElementById('batch-import-items');
+    const newRow = document.createElement('div');
+    newRow.className = 'batch-import-item';
+    newRow.innerHTML = `
+        <input type="text" class="batch-isbn-input" placeholder="请输入ISBN号">
+        <div class="batch-status">-</div>
+        <button class="btn btn-small btn-search-isbn">搜索</button>
+    `;
+    container.appendChild(newRow);
+    
+    // 为新添加的搜索按钮添加事件监听
+    const searchBtn = newRow.querySelector('.btn-search-isbn');
+    searchBtn.addEventListener('click', function() {
+        batchSearchISBN(this);
+    });
+}
+
+// 批量搜索ISBN
+async function batchSearchISBN(button) {
+    const row = button.closest('.batch-import-item');
+    const isbnInput = row.querySelector('.batch-isbn-input');
+    const statusDiv = row.querySelector('.batch-status');
+    const isbn = isbnInput.value.trim();
+    
+    if (!isbn) {
+        statusDiv.textContent = '请输入ISBN';
+        statusDiv.className = 'batch-status error';
+        return;
+    }
+    
+    // 防止重复点击
+    button.disabled = true;
+    statusDiv.textContent = '搜索中...';
+    statusDiv.className = 'batch-status processing';
+    
+    try {
+        // 调用智谱AI API查询图书信息
+        const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer 6cc5158bafbc44458e007a27825464be.NgsJybRTDD7KPMIA'
+            },
+            body: JSON.stringify({
+                model: 'glm-4.5',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `你是一个图书信息查询助手，请根据用户提供的ISBN号，返回该图书的详细信息。
+                                请严格按照以下JSON格式返回，不要添加任何额外内容：
+                                {
+                                    "title": "图书标题",
+                                    "author": "作者",
+                                    "publisher": "出版社",
+                                    "pubDate": "出版日期",
+                                    "description": "图书描述",
+                                    "price": "价格",
+                                    "category": "分类"
+                                }
+                                如果无法查询到该ISBN对应的图书信息，请返回：{"error": "未找到该ISBN对应的图书信息"}`
+                    },
+                    {
+                        role: 'user',
+                        content: `请查询ISBN号为${isbn}的图书信息`
+                    }
+                ],
+                temperature: 0.1,
+                thinking: {
+                    "type": "enabled"
+                }
+            })
+        });
+        
+        const status = response.status;
+        const data = await response.json();
+        
+        if (status === 200 && data.choices && data.choices.length > 0) {
+            const aiResponse = data.choices[0].message.content;
+            
+            try {
+                // 尝试解析JSON
+                const bookInfo = JSON.parse(aiResponse);
+                
+                if (bookInfo.error) {
+                    statusDiv.textContent = '查询失败';
+                    statusDiv.className = 'batch-status error';
+                } else {
+                    // 将图书信息存储在data属性中
+                    row.dataset.bookInfo = JSON.stringify(bookInfo);
+                    statusDiv.textContent = '查询成功';
+                    statusDiv.className = 'batch-status success';
+                }
+            } catch (e) {
+                console.error('AI返回格式错误:', e, '原始响应:', aiResponse);
+                statusDiv.textContent = '查询失败';
+                statusDiv.className = 'batch-status error';
+            }
+        } else {
+            statusDiv.textContent = '查询失败';
+            statusDiv.className = 'batch-status error';
+        }
+    } catch (error) {
+        console.error('搜索ISBN失败:', error);
+        statusDiv.textContent = '查询失败';
+        statusDiv.className = 'batch-status error';
+    } finally {
+        button.disabled = false;
+        // 延迟1秒后才能再次点击
+        setTimeout(() => {
+            button.disabled = false;
+        }, 1000);
+    }
+}
+
+// 批量添加图书
+async function batchAddBooks() {
+    const rows = document.querySelectorAll('.batch-import-item');
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (const row of rows) {
+        const isbnInput = row.querySelector('.batch-isbn-input');
+        const statusDiv = row.querySelector('.batch-status');
+        const isbn = isbnInput.value.trim();
+        
+        if (!isbn || statusDiv.textContent !== '查询成功') {
+            continue;
+        }
+        
+        // 获取存储在data属性中的图书信息
+        const bookInfoStr = row.dataset.bookInfo;
+        if (!bookInfoStr) {
+            statusDiv.textContent = '缺少图书信息';
+            statusDiv.className = 'batch-status error';
+            errorCount++;
+            continue;
+        }
+        
+        try {
+            const bookInfo = JSON.parse(bookInfoStr);
+            
+            // 准备添加图书的数据
+            const newBook = {
+                title: bookInfo.title || '未知书名',
+                author: bookInfo.author || '未知作者',
+                isbn: isbn,
+                category: bookInfo.category || '未分类',
+                publisher: bookInfo.publisher || '未知出版社',
+                status: 'in',
+                copies: 1, // 默认总数量为1
+                available: 1 // 默认可用数量为1
+            };
+            
+            // 使用Supabase服务添加图书
+            const addedBook = await bookService.addBook(newBook);
+            
+            // 更新本地数据
+            books.push(addedBook);
+            
+            // 刷新本地数据
+            await initData();
+            
+            // 刷新图书列表
+            initBookList();
+            updateStats();
+            generateTextStats();
+            updateLibraryDisplay();
+            
+            statusDiv.textContent = '添加成功';
+            statusDiv.className = 'batch-status success';
+            successCount++;
+        } catch (error) {
+            console.error('添加图书失败:', error);
+            statusDiv.textContent = '添加失败';
+            statusDiv.className = 'batch-status error';
+            errorCount++;
+        }
+        
+        // 每个ISBN添加后延迟2秒
+        await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    alert(`批量添加完成！成功：${successCount}本，失败：${errorCount}本`);
 }
 
 // 生成综合文字分析评估报告
@@ -867,7 +1237,7 @@ function generateAnalysisReport() {
     
     // 筛选当月借阅记录
     const currentMonthBorrows = borrowRecords.filter(r => {
-        const borrowDate = new Date(r.borrowDate);
+        const borrowDate = new Date(r.borrow_date);
         return borrowDate.getMonth() === currentMonth && borrowDate.getFullYear() === currentYear;
     });
     
@@ -886,7 +1256,7 @@ function generateAnalysisReport() {
     
     // 统计当月各分类借阅次数
     currentMonthBorrows.forEach(record => {
-        const book = books.find(b => b.id === record.bookId);
+        const book = books.find(b => b.id === record.book_id);
         if (book) {
             categoryBorrowCount[book.category] = (categoryBorrowCount[book.category] || 0) + 1;
         }
@@ -1001,10 +1371,11 @@ function generateAnalysisReport() {
 // 数据统计更新
 function updateStats() {
     const booksInLibrary = books.reduce((sum, book) => sum + book.copies, 0);
-    const todayBorrows = borrowRecords.filter(r => r.borrowDate === new Date().toISOString().split('T')[0]).length;
-    const activeBorrows = borrowRecords.filter(r => r.returnDate === null).length;
+    const today = new Date().toISOString().split('T')[0];
+    const todayBorrows = borrowRecords.filter(r => r.borrow_date === today).length;
+    const activeBorrows = borrowRecords.filter(r => r.return_date === null).length;
     const overdueBooks = borrowRecords.filter(r => 
-        r.returnDate === null && new Date(r.dueDate) < new Date()
+        r.return_date === null && new Date(r.due_date) < new Date()
     ).length;
     
     document.getElementById('books-in-library').textContent = booksInLibrary;
@@ -1016,117 +1387,137 @@ function updateStats() {
     generateAnalysisReport();
 }
 
-// 图表初始化
-function initCharts() {
-    // 近30天借阅趋势图（模拟数据）
-    const borrowTrendCtx = document.getElementById('borrow-trend-chart').getContext('2d');
-    new Chart(borrowTrendCtx, {
-        type: 'line',
-        data: {
-            labels: Array.from({length: 30}, (_, i) => `${i+1}日`),
-            datasets: [{
-                label: '借阅量',
-                data: Array.from({length: 30}, () => Math.floor(Math.random() * 30) + 5),
-                borderColor: '#6c5ce7',
-                backgroundColor: 'rgba(108, 92, 231, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: true
-                }
-            }
-        }
+// 文字统计生成函数
+function generateTextStats() {
+    // 近30天借阅趋势文字
+    generateBorrowTrendText();
+    // 热门书籍TOP10文字
+    generatePopularBooksText();
+    // 图书分类分布文字
+    generateBookCategoryText();
+}
+
+// 生成近30天借阅趋势文字
+function generateBorrowTrendText() {
+    const container = document.getElementById('borrow-trend-text');
+    if (!container) return;
+    
+    // 统计近30天借阅数据
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentBorrows = borrowRecords.filter(r => new Date(r.borrow_date) >= thirtyDaysAgo);
+    const borrowsByDay = {};
+    
+    recentBorrows.forEach(record => {
+        const date = record.borrow_date;
+        borrowsByDay[date] = (borrowsByDay[date] || 0) + 1;
     });
     
-    // 图书分类分布
+    // 生成文字统计
+    let text = `<h4>近30天借阅趋势</h4>`;
+    text += `<p>近30天总借阅次数：${recentBorrows.length}次</p>`;
+    
+    if (recentBorrows.length > 0) {
+        const dates = Object.keys(borrowsByDay).sort();
+        const firstDate = dates[0];
+        const lastDate = dates[dates.length - 1];
+        
+        text += `<p>统计周期：${firstDate} 至 ${lastDate}</p>`;
+        
+        // 找出借阅量最高和最低的日期
+        let maxDate = firstDate;
+        let minDate = firstDate;
+        for (const date in borrowsByDay) {
+            if (borrowsByDay[date] > borrowsByDay[maxDate]) {
+                maxDate = date;
+            }
+            if (borrowsByDay[date] < borrowsByDay[minDate]) {
+                minDate = date;
+            }
+        }
+        
+        text += `<p>借阅高峰日：${maxDate}（${borrowsByDay[maxDate]}次）</p>`;
+        text += `<p>借阅低谷日：${minDate}（${borrowsByDay[minDate]}次）</p>`;
+    } else {
+        text += `<p>近30天无借阅记录</p>`;
+    }
+    
+    container.innerHTML = text;
+}
+
+// 生成热门书籍TOP10文字
+function generatePopularBooksText() {
+    const container = document.getElementById('popular-books-text');
+    if (!container) return;
+    
+    // 统计图书借阅次数
+    const bookPopularity = {};
+    borrowRecords.forEach(record => {
+        bookPopularity[record.book_id] = (bookPopularity[record.book_id] || 0) + 1;
+    });
+    
+    // 生成热门书籍列表
+    const popularBooks = Object.entries(bookPopularity)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 10)
+        .map(([bookId, count]) => {
+            const book = books.find(b => b.id === parseInt(bookId));
+            return {
+                title: book ? book.title : '未知图书',
+                count: count
+            };
+        });
+    
+    let text = `<h4>热门书籍TOP10</h4>`;
+    
+    if (popularBooks.length > 0) {
+        text += `<ol>`;
+        popularBooks.forEach((book, index) => {
+            text += `<li>${book.title} - 借阅${book.count}次</li>`;
+        });
+        text += `</ol>`;
+    } else {
+        text += `<p>暂无借阅记录</p>`;
+    }
+    
+    container.innerHTML = text;
+}
+
+// 生成图书分类分布文字
+function generateBookCategoryText() {
+    const container = document.getElementById('book-category-text');
+    if (!container) return;
+    
+    // 统计图书分类
     const categoryStats = {};
     books.forEach(book => {
         categoryStats[book.category] = (categoryStats[book.category] || 0) + book.copies;
     });
     
-    const bookCategoryCtx = document.getElementById('book-category-chart').getContext('2d');
-    new Chart(bookCategoryCtx, {
-        type: 'doughnut',
-        data: {
-            labels: Object.keys(categoryStats),
-            datasets: [{
-                data: Object.values(categoryStats),
-                backgroundColor: [
-                    '#6c5ce7', '#00b894', '#0984e3', '#e17055', '#fdcb6e', '#a29bfe'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
+    // 生成文字统计
+    let text = `<h4>图书分类分布</h4>`;
     
-    // 热门图书TOP10
-    const bookPopularity = {};
-    borrowRecords.forEach(record => {
-        bookPopularity[record.bookId] = (bookPopularity[record.bookId] || 0) + 1;
-    });
-    
-    const popularBooks = Object.entries(bookPopularity)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 10)
-        .map(([bookId]) => {
-            const book = books.find(b => b.id.toString() === bookId);
-            return {
-                title: book ? book.title : '未知图书',
-                count: bookPopularity[bookId]
-            };
+    if (Object.keys(categoryStats).length > 0) {
+        text += `<ul>`;
+        Object.entries(categoryStats).forEach(([category, count]) => {
+            const totalBooks = books.reduce((sum, book) => sum + book.copies, 0);
+            const percentage = totalBooks > 0 ? ((count / totalBooks) * 100).toFixed(1) : 0;
+            text += `<li>${category}：${count}本 (${percentage}%)</li>`;
         });
+        text += `</ul>`;
+    } else {
+        text += `<p>暂无图书数据</p>`;
+    }
     
-    const popularBooksCtx = document.getElementById('popular-books-chart').getContext('2d');
-    new Chart(popularBooksCtx, {
-        type: 'bar',
-        data: {
-            labels: popularBooks.map(b => b.title),
-            datasets: [{
-                label: '借阅次数',
-                data: popularBooks.map(b => b.count),
-                backgroundColor: '#00b894'
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                x: {
-                    ticks: {
-                        maxRotation: 45,
-                        minRotation: 45
-                    }
-                }
-            }
-        }
-    });
+    container.innerHTML = text;
 }
 
 // 事件监听器
 async function initEventListeners() {
     try {
-        console.log('初始化数据...');
-        await initData();
-        console.log('数据初始化完成');
-        
         console.log('初始化导航事件监听器...');
-        // 主导航栏事件
+        // 主导航栏事件 - 优先绑定，确保页面切换功能正常
         document.querySelectorAll('.nav-menu .nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -1141,123 +1532,9 @@ async function initEventListeners() {
                 item.classList.add('active');
             });
         });
-        console.log('初始化登录功能...');
-        // 登录功能
-        document.getElementById('login-btn')?.addEventListener('click', studentLogin);
-    document.getElementById('admin-login-btn')?.addEventListener('click', () => showPage('admin-login-page'));
-    document.getElementById('admin-login-submit')?.addEventListener('click', adminLogin);
-    document.getElementById('back-to-student-login')?.addEventListener('click', () => showPage('login-page'));
-    document.getElementById('logout-btn')?.addEventListener('click', logout);
-    document.getElementById('admin-logout')?.addEventListener('click', logout);
-    
-    // 管理员入口
-    document.getElementById('admin-access-link')?.addEventListener('click', () => showPage('admin-login-page'));
-    
-    // 图书馆入口
-    document.getElementById('enter-library-btn')?.addEventListener('click', () => {
-        showPage('library-entry');
-    });
-    
-    // 图书馆入口页面功能
-    document.getElementById('enter-student-library')?.addEventListener('click', () => showPage('student-home'));
-    document.getElementById('enter-admin-library')?.addEventListener('click', () => showPage('admin-login-page'));
-    document.getElementById('back-to-main-btn')?.addEventListener('click', () => {
-        showPage('home');
-        // 更新导航状态
-        document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
-            nav.classList.remove('active');
-        });
-        document.querySelector('.nav-menu .nav-item[data-page="home"]').classList.add('active');
-    });
-    
-    // 学生功能
-    document.getElementById('borrow-btn')?.addEventListener('click', () => showPage('borrow-page'));
-    document.getElementById('return-btn')?.addEventListener('click', () => showPage('return-page'));
-    document.getElementById('library-btn')?.addEventListener('click', showLibraryPage);
-    
-    // 学生书库页面返回
-    document.getElementById('back-to-student-home')?.addEventListener('click', () => showPage('student-home'));
-    
-    // 页面返回按钮
-    document.getElementById('back-to-home')?.addEventListener('click', () => showPage('student-home'));
-    document.getElementById('return-back')?.addEventListener('click', () => showPage('student-home'));
-    document.getElementById('search-back')?.addEventListener('click', () => showPage('student-home'));
-    
-    // 图书搜索
-    document.getElementById('search-books-action')?.addEventListener('click', performBookSearch);
-    document.getElementById('search-books-input')?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            performBookSearch();
-        }
-    });
-    
-    // 改进的借书功能
-    document.getElementById('confirm-borrow-btn')?.addEventListener('click', confirmBorrow);
-    
-    // 改进的还书功能
-    document.getElementById('confirm-return-btn')?.addEventListener('click', confirmReturn);
-    
-    // 管理员导航
-    document.querySelectorAll('.sidebar-nav .nav-item[data-page]').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            showAdminPage(item.dataset.page);
-        });
-    });
-    
-    // 图书管理
-    document.querySelector('.page-actions .btn-primary')?.addEventListener('click', addBook);
-    
-    // 模态框事件
-    // 添加图书模态框
-    document.getElementById('close-add-modal')?.addEventListener('click', () => {
-        document.getElementById('add-book-modal').style.display = 'none';
-    });
-    document.getElementById('cancel-add-book')?.addEventListener('click', () => {
-        document.getElementById('add-book-modal').style.display = 'none';
-    });
-    document.getElementById('confirm-add-book')?.addEventListener('click', confirmAddBook);
-    
-    // 编辑图书模态框
-    document.getElementById('close-edit-modal')?.addEventListener('click', () => {
-        document.getElementById('edit-book-modal').style.display = 'none';
-    });
-    document.getElementById('cancel-edit-book')?.addEventListener('click', () => {
-        document.getElementById('edit-book-modal').style.display = 'none';
-    });
-    document.getElementById('confirm-edit-book')?.addEventListener('click', confirmEditBook);
-    
-    // 点击模态框外部关闭模态框
-    window.addEventListener('click', (e) => {
-        if (e.target === document.getElementById('add-book-modal')) {
-            document.getElementById('add-book-modal').style.display = 'none';
-        } else if (e.target === document.getElementById('edit-book-modal')) {
-            document.getElementById('edit-book-modal').style.display = 'none';
-        } else if (e.target === document.getElementById('announcement-modal')) {
-            document.getElementById('announcement-modal').style.display = 'none';
-        }
-    });
-    
-    // 公告管理功能
-    document.getElementById('publish-announcement-btn')?.addEventListener('click', publishAnnouncement);
-    document.getElementById('close-announcement')?.addEventListener('click', closeAnnouncement);
-    
-    // 管理员登录页面返回首页
-    document.getElementById('back-to-home-btn')?.addEventListener('click', () => {
-        showPage('home');
-        // 更新导航状态
-        document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
-            nav.classList.remove('active');
-        });
-        document.querySelector('.nav-menu .nav-item[data-page="home"]').classList.add('active');
-    });
-    
-        console.log('初始化ISBN搜索功能...');
-        // ISBN搜索功能
-        document.getElementById('search-isbn-btn')?.addEventListener('click', searchISBN);
         
         console.log('初始化荣誉公示标签切换...');
-        // 荣誉公示标签切换
+        // 荣誉公示标签切换 - 优先绑定
         document.querySelectorAll('.honors-tabs .tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const tabId = btn.getAttribute('data-tab');
@@ -1275,18 +1552,207 @@ async function initEventListeners() {
                 document.getElementById(tabId).classList.add('active');
             });
         });
+        
+        console.log('初始化登录功能...');
+        // 登录功能
+        document.getElementById('login-btn')?.addEventListener('click', studentLogin);
+        document.getElementById('admin-login-btn')?.addEventListener('click', () => showPage('admin-login-page'));
+        document.getElementById('admin-login-submit')?.addEventListener('click', adminLogin);
+        document.getElementById('back-to-student-login')?.addEventListener('click', () => showPage('login-page'));
+        document.getElementById('logout-btn')?.addEventListener('click', logout);
+        document.getElementById('admin-logout')?.addEventListener('click', logout);
+        
+        // 管理员入口
+        document.getElementById('admin-access-link')?.addEventListener('click', () => showPage('admin-login-page'));
+        
+        // 图书馆入口
+        document.getElementById('enter-library-btn')?.addEventListener('click', () => {
+            showPage('library-entry');
+        });
+        
+        // 图书馆入口页面功能
+        document.getElementById('enter-student-library')?.addEventListener('click', () => showPage('student-home'));
+        document.getElementById('enter-admin-library')?.addEventListener('click', () => showPage('admin-login-page'));
+        document.getElementById('back-to-main-btn')?.addEventListener('click', () => {
+            showPage('home');
+            // 更新导航状态
+            document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
+                nav.classList.remove('active');
+            });
+            document.querySelector('.nav-menu .nav-item[data-page="home"]').classList.add('active');
+        });
+        
+        // 学生功能
+        document.getElementById('borrow-btn')?.addEventListener('click', () => showPage('borrow-page'));
+        document.getElementById('return-btn')?.addEventListener('click', () => showPage('return-page'));
+        document.getElementById('library-btn')?.addEventListener('click', showLibraryPage);
+        
+        // 学生书库页面返回
+        document.getElementById('back-to-student-home')?.addEventListener('click', () => showPage('student-home'));
+        
+        // 页面返回按钮
+        document.getElementById('back-to-home')?.addEventListener('click', () => showPage('student-home'));
+        document.getElementById('return-back')?.addEventListener('click', () => showPage('student-home'));
+        document.getElementById('search-back')?.addEventListener('click', () => showPage('student-home'));
+        
+        // 图书搜索
+        document.getElementById('search-books-action')?.addEventListener('click', performBookSearch);
+        document.getElementById('search-books-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performBookSearch();
+            }
+        });
+        
+        // 改进的借书功能
+        document.getElementById('confirm-borrow-btn')?.addEventListener('click', confirmBorrow);
+        
+        // 改进的还书功能
+        document.getElementById('confirm-return-btn')?.addEventListener('click', confirmReturn);
+        
+        // 管理员导航
+        document.querySelectorAll('.sidebar-nav .nav-item[data-page]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                showAdminPage(item.dataset.page);
+            });
+        });
+        
+        // 图书管理
+        document.querySelector('.page-actions .btn-primary')?.addEventListener('click', addBook);
+        
+        // 模态框事件
+        // 添加图书模态框
+        document.getElementById('close-add-modal')?.addEventListener('click', () => {
+            document.getElementById('add-book-modal').style.display = 'none';
+        });
+        document.getElementById('cancel-add-book')?.addEventListener('click', () => {
+            document.getElementById('add-book-modal').style.display = 'none';
+        });
+        document.getElementById('confirm-add-book')?.addEventListener('click', confirmAddBook);
+        
+        // 编辑图书模态框
+        document.getElementById('close-edit-modal')?.addEventListener('click', () => {
+            document.getElementById('edit-book-modal').style.display = 'none';
+        });
+        document.getElementById('cancel-edit-book')?.addEventListener('click', () => {
+            document.getElementById('edit-book-modal').style.display = 'none';
+        });
+        document.getElementById('confirm-edit-book')?.addEventListener('click', confirmEditBook);
+        
+        // 批量导入模态框
+        document.getElementById('close-batch-modal')?.addEventListener('click', () => {
+            document.getElementById('batch-import-modal').style.display = 'none';
+        });
+        document.getElementById('cancel-batch-import')?.addEventListener('click', () => {
+            document.getElementById('batch-import-modal').style.display = 'none';
+        });
+        document.getElementById('confirm-batch-import')?.addEventListener('click', () => {
+            document.getElementById('batch-import-modal').style.display = 'none';
+        });
+        
+        // 批量导入功能按钮
+        document.getElementById('add-isbn-row')?.addEventListener('click', addIsbnRow);
+        document.getElementById('batch-add-books')?.addEventListener('click', batchAddBooks);
+        
+        // 为静态行的搜索按钮添加事件监听器
+        const staticSearchBtn = document.querySelector('.batch-import-item .btn-search-isbn');
+        if (staticSearchBtn) {
+            staticSearchBtn.addEventListener('click', function() {
+                batchSearchISBN(this);
+            });
+        }
+        
+        // 图书管理批量导入按钮
+        const batchImportBtn = document.querySelector('.page-actions .btn-secondary');
+        if (batchImportBtn && batchImportBtn.textContent.includes('批量导入')) {
+            batchImportBtn.addEventListener('click', () => {
+                document.getElementById('batch-import-modal').style.display = 'block';
+            });
+        }
+        
+        // 图书管理导出报表按钮
+        const bookExportBtn = document.querySelector('#books .page-actions .btn-secondary:last-child');
+        if (bookExportBtn) {
+            bookExportBtn.addEventListener('click', exportBooks);
+        }
+        
+        // 读者管理导出报表按钮
+        const readerExportBtn = document.querySelector('#readers .page-actions .btn-secondary');
+        if (readerExportBtn) {
+            readerExportBtn.addEventListener('click', exportReaders);
+        }
+        
+        // 批量导入确认按钮
+        const confirmImportBtn = document.getElementById('confirm-batch-import');
+        if (confirmImportBtn) {
+            confirmImportBtn.addEventListener('click', async () => {
+                await batchAddBooks();
+                // 关闭模态框
+                document.getElementById('batch-import-modal').style.display = 'none';
+            });
+        }
+        
+        // 点击模态框外部关闭模态框
+        window.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('add-book-modal')) {
+                document.getElementById('add-book-modal').style.display = 'none';
+            } else if (e.target === document.getElementById('edit-book-modal')) {
+                document.getElementById('edit-book-modal').style.display = 'none';
+            } else if (e.target === document.getElementById('announcement-modal')) {
+                document.getElementById('announcement-modal').style.display = 'none';
+            }
+        });
+        
+        // 公告管理功能
+        document.getElementById('publish-announcement-btn')?.addEventListener('click', publishAnnouncement);
+        document.getElementById('close-announcement')?.addEventListener('click', closeAnnouncement);
+        
+        // 管理员登录页面返回首页
+        document.getElementById('back-to-home-btn')?.addEventListener('click', () => {
+            showPage('home');
+            // 更新导航状态
+            document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
+                nav.classList.remove('active');
+            });
+            document.querySelector('.nav-menu .nav-item[data-page="home"]').classList.add('active');
+        });
+        
+        console.log('初始化ISBN搜索功能...');
+        // ISBN搜索功能
+        document.getElementById('search-isbn-btn')?.addEventListener('click', searchISBN);
+        
+        // 最后初始化数据，不阻塞事件监听器绑定
+        console.log('初始化数据...');
+        await initData();
+        console.log('数据初始化完成');
+        
     } catch (error) {
         console.error('事件监听器初始化失败:', error);
-        throw error;
+        // 即使事件监听器初始化失败，也不抛出错误，确保页面可以访问
     }
 }
 
 // 发布公告
 async function publishAnnouncement() {
-    const title = document.getElementById('announcement-title').value;
-    const content = document.getElementById('announcement-content').value;
+    // 确保元素存在
+    const titleElement = document.getElementById('publish-announcement-title');
+    const contentElement = document.getElementById('publish-announcement-content');
     
-    if (title && content) {
+    if (!titleElement || !contentElement) {
+        console.error('公告表单元素未找到');
+        alert('公告表单元素未找到，请检查页面结构');
+        return;
+    }
+    
+    // 直接获取值，不使用可选链，确保能正确获取
+    const title = titleElement.value.trim();
+    const content = contentElement.value.trim();
+    
+    console.log('公告标题:', title, '长度:', title.length, '类型:', typeof title);
+    console.log('公告内容:', content, '长度:', content.length, '类型:', typeof content);
+    
+    // 更严格的表单验证
+    if (title.length > 0 && content.length > 0) {
         try {
             const newAnnouncement = {
                 title: title,
@@ -1294,22 +1760,27 @@ async function publishAnnouncement() {
                 date: new Date().toISOString().split('T')[0]
             };
             
+            console.log('准备发布公告:', newAnnouncement);
+            
             // 使用Supabase服务添加公告
             const addedAnnouncement = await announcementService.addAnnouncement(newAnnouncement);
+            
+            console.log('公告发布成功，返回数据:', addedAnnouncement);
             
             // 更新本地数据
             announcements.push(addedAnnouncement);
             
             // 清空表单
-            document.getElementById('announcement-title').value = '';
-            document.getElementById('announcement-content').value = '';
+            titleElement.value = '';
+            contentElement.value = '';
             
             alert('公告发布成功！');
         } catch (error) {
             console.error('发布公告失败:', error);
-            alert('发布公告失败，请稍后重试');
+            alert('发布公告失败，请稍后重试\n\n错误详情: ' + error.message);
         }
     } else {
+        console.error('表单验证失败:', 'title:', title, 'content:', content);
         alert('请填写公告标题和内容！');
     }
 }
@@ -1357,7 +1828,7 @@ const mockISBNData = {
 };
 
 // ISBN搜索功能
-function searchISBN() {
+async function searchISBN() {
     const isbn = document.getElementById('add-book-isbn').value;
     
     if (!isbn) {
@@ -1365,26 +1836,104 @@ function searchISBN() {
         return;
     }
     
+    // 显示加载状态
+    const searchButton = document.getElementById('search-isbn-btn');
+    const originalButtonText = searchButton.innerHTML;
+    searchButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 搜索中...';
+    searchButton.disabled = true;
+    
     try {
-        // 使用模拟数据搜索图书
-        if (mockISBNData[isbn]) {
-            const bookInfo = mockISBNData[isbn];
+        // 调用智谱AI API查询图书信息
+        const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer 6cc5158bafbc44458e007a27825464be.NgsJybRTDD7KPMIA'
+            },
+            body: JSON.stringify({
+                model: 'glm-4.5',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `你是一个图书信息查询助手，请根据用户提供的ISBN号，返回该图书的详细信息。
+                                请严格按照以下JSON格式返回，不要添加任何额外内容：
+                                {
+                                    "title": "图书标题",
+                                    "author": "作者",
+                                    "publisher": "出版社",
+                                    "pubDate": "出版日期",
+                                    "description": "图书描述",
+                                    "price": "价格",
+                                    "category": "分类"
+                                }
+                                如果无法查询到该ISBN对应的图书信息，请返回：{"error": "未找到该ISBN对应的图书信息"}`
+                    },
+                    {
+                        role: 'user',
+                        content: `请查询ISBN号为${isbn}的图书信息`
+                    }
+                ],
+                temperature: 0.1,
+                thinking: {
+                    "type": "enabled"
+                }
+            })
+        });
+        
+        const status = response.status;
+        const data = await response.json();
+        
+        if (status === 200 && data.choices && data.choices.length > 0) {
+            const aiResponse = data.choices[0].message.content;
             
-            // 填充表单数据
-            document.getElementById('add-book-title').value = bookInfo.title || '';
-            document.getElementById('add-book-author').value = bookInfo.author || '';
-            document.getElementById('add-book-category').value = bookInfo.category || '';
-            document.getElementById('add-book-publisher').value = bookInfo.publisher || '';
-            
-            // 提示用户搜索成功
-            alert('ISBN搜索成功！已自动填充图书信息');
+            try {
+                // 尝试解析JSON
+                const bookInfo = JSON.parse(aiResponse);
+                
+                if (bookInfo.error) {
+                    alert(`未找到该ISBN对应的图书信息：${bookInfo.error}`);
+                } else {
+                    // 填充表单数据
+                    document.getElementById('add-book-title').value = bookInfo.title || '';
+                    document.getElementById('add-book-author').value = bookInfo.author || '';
+                    document.getElementById('add-book-publisher').value = bookInfo.publisher || '';
+                    document.getElementById('add-book-category').value = bookInfo.category || '';
+                    
+                    // 提示用户搜索成功
+                    alert('ISBN搜索成功！已自动填充图书信息');
+                }
+            } catch (e) {
+                console.error('AI返回格式错误:', e, '原始响应:', aiResponse);
+                alert('AI返回格式错误，请稍后重试或手动输入图书信息');
+            }
         } else {
-            alert('未找到该ISBN对应的图书信息\n\n可尝试以下ISBN示例：\n9787506365437 (活着)\n9787020156736 (红楼梦)\n9787544270878 (百年孤独)\n9787115421880 (JavaScript高级程序设计)\n9787115428028 (Python编程：从入门到实践)\n9787111407010 (算法导论)');
+            // 显示详细的错误信息
+            let errorMessage = `智谱AI返回错误，HTTP状态码: ${status}`;
+            if (data.error) {
+                errorMessage = `智谱AI返回错误: ${data.error.message} (状态码: ${status})`;
+                if (data.error.code) {
+                    errorMessage += ` (错误码: ${data.error.code})`;
+                }
+            } else if (data.msg) {
+                errorMessage += ` (详细信息: ${data.msg})`;
+            }
+            alert(`ISBN搜索失败：${errorMessage}`);
         }
     } catch (error) {
         console.error('ISBN搜索失败:', error);
-        alert('ISBN搜索失败，请检查ISBN号码是否正确');
+        alert(`ISBN搜索失败：${error.message}\n\n请检查网络连接或稍后重试`);
+    } finally {
+        // 恢复搜索按钮状态
+        searchButton.innerHTML = originalButtonText;
+        searchButton.disabled = false;
     }
+}
+
+// 页面加载完成后初始化事件监听器
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initEventListeners);
+} else {
+    initEventListeners();
 }
 
 // 保存数据到Supabase

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISBN API 测试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .result pre {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .result.error {
+            color: #dc3545;
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        
+        .api-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .api-tab {
+            padding: 10px 20px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .api-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .api-tab:hover:not(.active) {
+            background: #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ISBN API 测试工具</h1>
+        
+        <div class="test-section">
+            <h2>1. Open Library API</h2>
+            <div class="input-group">
+                <input type="text" id="isbn-input-1" placeholder="请输入ISBN号，例如：9787506365437">
+                <button onclick="testOpenLibraryAPI()">测试搜索</button>
+            </div>
+            <div class="result" id="result-1"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. Google Books API</h2>
+            <div class="input-group">
+                <input type="text" id="isbn-input-2" placeholder="请输入ISBN号，例如：9787506365437">
+                <button onclick="testGoogleBooksAPI()">测试搜索</button>
+            </div>
+            <div class="result" id="result-2"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. ISBNdb API</h2>
+            <div class="input-group">
+                <input type="text" id="isbn-input-3" placeholder="请输入ISBN号，例如：9787506365437">
+                <button onclick="testISBNdbAPI()">测试搜索</button>
+            </div>
+            <div class="result" id="result-3"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. WorldCat API</h2>
+            <div class="input-group">
+                <input type="text" id="isbn-input-4" placeholder="请输入ISBN号，例如：9787506365437">
+                <button onclick="testWorldCatAPI()">测试搜索</button>
+            </div>
+            <div class="result" id="result-4"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>5. 豆瓣API (国内)</h2>
+            <div class="input-group">
+                <input type="text" id="isbn-input-5" placeholder="请输入ISBN号，例如：9787506365437">
+                <button onclick="testDoubanAPI()">测试搜索</button>
+            </div>
+            <div class="result" id="result-5"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>6. DeepSeek AI ISBN查询</h2>
+            <div class="input-group">
+                <input type="text" id="isbn-input-6" placeholder="请输入ISBN号，例如：9787506365437">
+                <button onclick="testDeepSeekAI()">AI搜索</button>
+            </div>
+            <div class="result" id="result-6"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>7. 智谱AI ISBN查询 (推荐 - 有免费额度)</h2>
+            <div class="input-group">
+                <input type="text" id="isbn-input-7" placeholder="请输入ISBN号，例如：9787506365437">
+                <button onclick="testZhipuAI()">AI搜索</button>
+            </div>
+            <div class="result" id="result-7"></div>
+        </div>
+    </div>
+    
+    <script>
+        // 显示结果
+        function showResult(resultId, data) {
+            const resultDiv = document.getElementById(resultId);
+            if (data.error) {
+                resultDiv.className = 'result error';
+                let errorHtml = `<strong>错误：</strong>${data.error}<br><br>`;
+                
+                // 如果有完整响应，显示更多详细信息
+                if (data.fullResponse) {
+                    errorHtml += `<strong>完整响应：</strong><pre style="max-height: 200px; overflow-y: auto; margin: 10px 0;">${JSON.stringify(data.fullResponse, null, 2)}</pre>`;
+                }
+                
+                // 如果有状态码，显示状态码
+                if (data.statusCode) {
+                    errorHtml += `<strong>HTTP状态码：</strong>${data.statusCode}<br>`;
+                }
+                
+                // 如果有错误类型和堆栈，显示它们（主要用于调试）
+                if (data.errorType) {
+                    errorHtml += `<strong>错误类型：</strong>${data.errorType}<br>`;
+                }
+                
+                if (data.errorStack) {
+                    errorHtml += `<strong>错误堆栈：</strong><pre style="max-height: 150px; overflow-y: auto; margin: 10px 0; font-size: 12px;">${data.errorStack}</pre>`;
+                }
+                
+                resultDiv.innerHTML = errorHtml;
+            } else {
+                resultDiv.className = 'result';
+                resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+        }
+        
+        // 1. 测试 Open Library API
+        async function testOpenLibraryAPI() {
+            const isbn = document.getElementById('isbn-input-1').value.trim();
+            if (!isbn) {
+                alert('请输入ISBN号');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result-1');
+            resultDiv.innerHTML = '<strong>正在搜索...</strong>';
+            
+            try {
+                const response = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+                const data = await response.json();
+                showResult('result-1', data);
+            } catch (error) {
+                showResult('result-1', { error: error.message });
+            }
+        }
+        
+        // 2. 测试 Google Books API
+        async function testGoogleBooksAPI() {
+            const isbn = document.getElementById('isbn-input-2').value.trim();
+            if (!isbn) {
+                alert('请输入ISBN号');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result-2');
+            resultDiv.innerHTML = '<strong>正在搜索...</strong>';
+            
+            try {
+                const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+                const data = await response.json();
+                showResult('result-2', data);
+            } catch (error) {
+                showResult('result-2', { error: error.message });
+            }
+        }
+        
+        // 3. 测试 ISBNdb API
+        async function testISBNdbAPI() {
+            const isbn = document.getElementById('isbn-input-3').value.trim();
+            if (!isbn) {
+                alert('请输入ISBN号');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result-3');
+            resultDiv.innerHTML = '<strong>正在搜索...</strong>';
+            
+            // ISBNdb 需要 API 密钥，这里使用示例密钥（实际使用时需要替换为自己的密钥）
+            const apiKey = 'YOUR_API_KEY'; // 替换为实际的 API 密钥
+            
+            try {
+                const response = await fetch(`https://api.isbndb.com/books/${isbn}`, {
+                    headers: {
+                        'Authorization': apiKey
+                    }
+                });
+                const data = await response.json();
+                showResult('result-3', data);
+            } catch (error) {
+                showResult('result-3', { error: error.message });
+            }
+        }
+        
+        // 4. 测试 WorldCat API
+        async function testWorldCatAPI() {
+            const isbn = document.getElementById('isbn-input-4').value.trim();
+            if (!isbn) {
+                alert('请输入ISBN号');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result-4');
+            resultDiv.innerHTML = '<strong>正在搜索...</strong>';
+            
+            try {
+                // WorldCat Search API - 需要 API 密钥
+                const apiKey = 'YOUR_API_KEY'; // 替换为实际的 API 密钥
+                const response = await fetch(`https://worldcat.org/bib/data/${isbn}?classificationScheme=LibraryOfCongress`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+                const data = await response.json();
+                showResult('result-4', data);
+            } catch (error) {
+                showResult('result-4', { error: error.message });
+            }
+        }
+        
+        // 5. 测试豆瓣API (国内)
+        async function testDoubanAPI() {
+            const isbn = document.getElementById('isbn-input-5').value.trim();
+            if (!isbn) {
+                alert('请输入ISBN号');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result-5');
+            resultDiv.innerHTML = '<strong>正在搜索...</strong>';
+            
+            try {
+                // 豆瓣图书API，无需API密钥
+                const response = await fetch(`https://api.douban.com/v2/book/isbn/${isbn}`);
+                const data = await response.json();
+                showResult('result-5', data);
+            } catch (error) {
+                showResult('result-5', { error: error.message });
+            }
+        }
+        
+        // 6. 测试DeepSeek AI ISBN查询
+        async function testDeepSeekAI() {
+            const isbn = document.getElementById('isbn-input-6').value.trim();
+            
+            if (!isbn) {
+                alert('请输入ISBN号');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result-6');
+            resultDiv.innerHTML = '<strong>AI正在搜索...</strong>';
+            
+            try {
+                // DeepSeek API调用
+                const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer sk-01742e9948a74acd8661fef50b247dbc'
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: `你是一个图书信息查询助手，请根据用户提供的ISBN号，返回该图书的详细信息。
+                                请严格按照以下JSON格式返回，不要添加任何额外内容：
+                                {
+                                    "title": "图书标题",
+                                    "author": "作者",
+                                    "publisher": "出版社",
+                                    "pubDate": "出版日期",
+                                    "description": "图书描述",
+                                    "price": "价格",
+                                    "category": "分类"
+                                }
+                                如果无法查询到该ISBN对应的图书信息，请返回：{"error": "未找到该ISBN对应的图书信息"}`
+                            },
+                            {
+                                role: 'user',
+                                content: `请查询ISBN号为${isbn}的图书信息`
+                            }
+                        ],
+                        temperature: 0.1
+                    })
+                });
+                
+                const status = response.status;
+                const data = await response.json();
+                
+                // 解析AI返回的结果
+                console.log('DeepSeek API返回原始数据:', data);
+                if (status === 200 && data.choices && data.choices.length > 0) {
+                    const aiResponse = data.choices[0].message.content;
+                    try {
+                        // 尝试解析JSON
+                        const bookInfo = JSON.parse(aiResponse);
+                        showResult('result-6', bookInfo);
+                    } catch (e) {
+                        // 如果AI返回的不是纯JSON，直接显示
+                        showResult('result-6', { 
+                            error: 'AI返回格式错误', 
+                            rawResponse: aiResponse,
+                            parseError: e.message
+                        });
+                    }
+                } else {
+                    // 显示详细的错误信息
+                    let errorMessage = `AI返回错误，HTTP状态码: ${status}`;
+                    if (data.error) {
+                        errorMessage = `AI返回错误: ${data.error.message} (状态码: ${status})`;
+                        if (data.error.code) {
+                            errorMessage += ` (错误码: ${data.error.code})`;
+                            // 常见的错误码解释
+                            if (data.error.code === 'insufficient_quota' || data.error.code === 'quota_exceeded') {
+                                errorMessage += ' (可能是余额不足或免费额度已用完，请充值后重试)';
+                            } else if (data.error.code === 'invalid_api_key' || data.error.code === 'unauthorized') {
+                                errorMessage += ' (API密钥无效或已过期)';
+                            } else if (data.error.code === 'api_key_expired') {
+                                errorMessage += ' (API密钥已过期)';
+                            } else if (data.error.code === 'rate_limit_exceeded') {
+                                errorMessage += ' (请求频率过高，请稍后重试)';
+                            } else if (data.error.code === 'model_not_found') {
+                                errorMessage += ' (模型不存在)';
+                            }
+                        }
+                    }
+                    showResult('result-6', { 
+                        error: errorMessage, 
+                        fullResponse: data,
+                        statusCode: status
+                    });
+                }
+            } catch (error) {
+                showResult('result-6', { 
+                    error: `请求发送失败: ${error.message}`,
+                    errorType: error.name,
+                    errorStack: error.stack
+                });
+            }
+        }
+        
+        // 7. 测试智谱AI ISBN查询
+        async function testZhipuAI() {
+            const isbn = document.getElementById('isbn-input-7').value.trim();
+            
+            if (!isbn) {
+                alert('请输入ISBN号');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result-7');
+            resultDiv.innerHTML = '<strong>智谱AI正在搜索...</strong>';
+            
+            try {
+                // 智谱AI官方API调用
+                const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer 6cc5158bafbc44458e007a27825464be.NgsJybRTDD7KPMIA'
+                    },
+                    body: JSON.stringify({
+                        model: 'glm-4.5',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: `你是一个图书信息查询助手，请根据用户提供的ISBN号，返回该图书的详细信息。
+                                请严格按照以下JSON格式返回，不要添加任何额外内容：
+                                {
+                                    "title": "图书标题",
+                                    "author": "作者",
+                                    "publisher": "出版社",
+                                    "pubDate": "出版日期",
+                                    "description": "图书描述",
+                                    "price": "价格",
+                                    "category": "分类"
+                                }
+                                如果无法查询到该ISBN对应的图书信息，请返回：{"error": "未找到该ISBN对应的图书信息"}`
+                            },
+                            {
+                                role: 'user',
+                                content: `请查询ISBN号为${isbn}的图书信息`
+                            }
+                        ],
+                        temperature: 0.1,
+                        thinking: {
+                            "type": "enabled"
+                        }
+                    })
+                });
+                
+                const status = response.status;
+                const data = await response.json();
+                
+                // 解析AI返回的结果
+                console.log('智谱AI API返回原始数据:', data);
+                if (status === 200 && data.choices && data.choices.length > 0) {
+                    const aiResponse = data.choices[0].message.content;
+                    try {
+                        // 尝试解析JSON
+                        const bookInfo = JSON.parse(aiResponse);
+                        showResult('result-7', bookInfo);
+                    } catch (e) {
+                        // 如果AI返回的不是纯JSON，直接显示
+                        showResult('result-7', { 
+                            error: 'AI返回格式错误', 
+                            rawResponse: aiResponse,
+                            parseError: e.message
+                        });
+                    }
+                } else {
+                    // 显示详细的错误信息
+                    let errorMessage = `智谱AI返回错误，HTTP状态码: ${status}`;
+                    if (data.error) {
+                        errorMessage = `智谱AI返回错误: ${data.error.message} (状态码: ${status})`;
+                        if (data.error.code) {
+                            errorMessage += ` (错误码: ${data.error.code})`;
+                            // 常见的错误码解释
+                            if (data.error.code === 'insufficient_quota' || data.error.code === 'quota_exceeded') {
+                                errorMessage += ' (可能是余额不足或免费额度已用完)';
+                            } else if (data.error.code === 'invalid_api_key' || data.error.code === 'unauthorized') {
+                                errorMessage += ' (API密钥无效或已过期)';
+                            } else if (data.error.code === 'api_key_expired') {
+                                errorMessage += ' (API密钥已过期)';
+                            } else if (data.error.code === 'rate_limit_exceeded') {
+                                errorMessage += ' (请求频率过高，请稍后重试)';
+                            } else if (data.error.code === 'model_not_found') {
+                                errorMessage += ' (模型不存在)';
+                            }
+                        } else if (data.msg) {
+                            errorMessage += ` (详细信息: ${data.msg})`;
+                        }
+                    }
+                    showResult('result-7', { 
+                        error: errorMessage, 
+                        fullResponse: data,
+                        statusCode: status
+                    });
+                }
+            } catch (error) {
+                showResult('result-7', { 
+                    error: `请求发送失败: ${error.message}`,
+                    errorType: error.name,
+                    errorStack: error.stack
+                });
+            }
+        }
+    </script>
+</body>
+</html>

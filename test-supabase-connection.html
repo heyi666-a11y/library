@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase连接测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-section {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        code {
+            background-color: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+        }
+        pre {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .config-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Supabase连接测试</h1>
+    
+    <div class="test-section">
+        <h2>配置信息</h2>
+        <div class="config-info">
+            <p><strong>项目URL:</strong> <code>https://yzhnrtinfztdumfzuxvk.supabase.co</code></p>
+            <p><strong>API密钥:</strong> <code>sb_publishable_yebBr2U45Y5yWMUzNcaBkw_NRaAwZEM</code></p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试步骤</h2>
+        <ol>
+            <li>确保您已在Supabase控制台执行了 <code>supabase-schema.sql</code> 脚本</li>
+            <li>点击下方按钮开始测试连接</li>
+            <li>查看测试结果，确认所有表都能正常访问</li>
+        </ol>
+        <button class="btn" onclick="testConnection()">开始测试连接</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试结果</h2>
+        <div id="test-results"></div>
+    </div>
+    
+    <script>
+        // Supabase配置
+        const supabaseUrl = 'https://yzhnrtinfztdumfzuxvk.supabase.co';
+        const supabaseKey = 'sb_publishable_yebBr2U45Y5yWMUzNcaBkw_NRaAwZEM';
+        
+        // 初始化Supabase客户端
+        const { createClient } = window.supabase;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        async function testConnection() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<p class="info">正在测试连接...</p>';
+            
+            try {
+                // 测试1: 检查客户端是否创建成功
+                if (!supabase) {
+                    throw new Error('Supabase客户端创建失败');
+                }
+                
+                let results = '<h3>测试结果：</h3>';
+                
+                // 测试2: 测试announcements表
+                results += '<h4>1. 测试announcements表:</h4>';
+                try {
+                    const { data: announcements, error: announcementError } = await supabase
+                        .from('announcements')
+                        .select('*')
+                        .limit(1);
+                    
+                    if (announcementError) {
+                        results += `<div class="error">❌ 失败: ${announcementError.message}</div>`;
+                    } else {
+                        results += `<div class="success">✅ 成功！获取到 ${announcements.length} 条记录</div>`;
+                    }
+                } catch (err) {
+                    results += `<div class="error">❌ 失败: ${err.message}</div>`;
+                }
+                
+                // 测试3: 测试books表
+                results += '<h4>2. 测试books表:</h4>';
+                try {
+                    const { data: books, error: booksError } = await supabase
+                        .from('books')
+                        .select('*')
+                        .limit(1);
+                    
+                    if (booksError) {
+                        results += `<div class="error">❌ 失败: ${booksError.message}</div>`;
+                    } else {
+                        results += `<div class="success">✅ 成功！获取到 ${books.length} 条记录</div>`;
+                    }
+                } catch (err) {
+                    results += `<div class="error">❌ 失败: ${err.message}</div>`;
+                }
+                
+                // 测试4: 测试readers表
+                results += '<h4>3. 测试readers表:</h4>';
+                try {
+                    const { data: readers, error: readersError } = await supabase
+                        .from('readers')
+                        .select('*')
+                        .limit(1);
+                    
+                    if (readersError) {
+                        results += `<div class="error">❌ 失败: ${readersError.message}</div>`;
+                    } else {
+                        results += `<div class="success">✅ 成功！获取到 ${readers.length} 条记录</div>`;
+                    }
+                } catch (err) {
+                    results += `<div class="error">❌ 失败: ${err.message}</div>`;
+                }
+                
+                // 测试5: 测试borrow_records表
+                results += '<h4>4. 测试borrow_records表:</h4>';
+                try {
+                    const { data: borrowRecords, error: borrowRecordsError } = await supabase
+                        .from('borrow_records')
+                        .select('*')
+                        .limit(1);
+                    
+                    if (borrowRecordsError) {
+                        results += `<div class="error">❌ 失败: ${borrowRecordsError.message}</div>`;
+                    } else {
+                        results += `<div class="success">✅ 成功！获取到 ${borrowRecords.length} 条记录</div>`;
+                    }
+                } catch (err) {
+                    results += `<div class="error">❌ 失败: ${err.message}</div>`;
+                }
+                
+                // 测试6: 测试客户端版本
+                results += '<h4>5. 测试客户端版本:</h4>';
+                try {
+                    const version = supabase.version;
+                    results += `<div class="success">✅ 成功！Supabase客户端版本: ${version}</div>`;
+                } catch (err) {
+                    results += `<div class="error">❌ 失败: ${err.message}</div>`;
+                }
+                
+                results += '<h3>结论:</h3>';
+                results += '<p class="info">如果所有测试都成功，说明您的Supabase连接配置正确，数据库表已成功创建。</p>';
+                results += '<p class="info">如果有测试失败，请检查以下几点:</p>';
+                results += '<ul>';
+                results += '<li>确保您已在Supabase控制台执行了 <code>supabase-schema.sql</code> 脚本</li>';
+                results += '<li>检查项目URL和API密钥是否正确</li>';
+                results += '<li>确保您的网络连接正常</li>';
+                results += '<li>检查Supabase项目的状态是否正常</li>';
+                results += '</ul>';
+                
+                resultsDiv.innerHTML = results;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">❌ 连接测试失败: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

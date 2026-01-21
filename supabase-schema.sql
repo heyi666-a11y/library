@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS books (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     author VARCHAR(255) NOT NULL,
-    isbn VARCHAR(50) NOT NULL UNIQUE,
+    isbn VARCHAR(50) UNIQUE,
     category VARCHAR(100) NOT NULL,
     publisher VARCHAR(255) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'in',
@@ -20,8 +20,6 @@ CREATE TABLE IF NOT EXISTS books (
 CREATE TABLE IF NOT EXISTS readers (
     id VARCHAR(20) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    grade VARCHAR(20) NOT NULL,
-    class VARCHAR(20) NOT NULL,
     borrow_count INTEGER NOT NULL DEFAULT 0,
     overdue_count INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -82,13 +80,13 @@ INSERT INTO books (title, author, isbn, category, publisher, copies, available) 
 ON CONFLICT (isbn) DO NOTHING;
 
 -- 插入示例读者
-INSERT INTO readers (id, name, grade, class, borrow_count, overdue_count) VALUES
-('20210001', '张三', '高一', '1班', 2, 0),
-('20210002', '李四', '高一', '1班', 1, 1),
-('20210003', '王五', '高一', '2班', 3, 0),
-('20220001', '赵六', '高二', '1班', 0, 0),
-('20220002', '孙七', '高二', '2班', 2, 0),
-('20230001', '周八', '高三', '1班', 1, 0)
+INSERT INTO readers (id, name, borrow_count, overdue_count) VALUES
+('20210001', '张三', 2, 0),
+('20210002', '李四', 1, 1),
+('20210003', '王五', 3, 0),
+('20220001', '赵六', 0, 0),
+('20220002', '孙七', 2, 0),
+('20230001', '周八', 1, 0)
 ON CONFLICT (id) DO NOTHING;
 
 -- 插入示例借阅记录

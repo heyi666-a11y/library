@@ -7,7 +7,9 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <!-- 导航栏 -->
@@ -369,8 +371,12 @@
             </div>
             <div class="student-info">
                 <div class="form-group">
-                    <label for="borrow-student-id"><i class="fas fa-id-card"></i> 学号/校卡</label>
-                    <input type="text" id="borrow-student-id" placeholder="请输入学号或刷校卡">
+                    <label for="borrow-student-id"><i class="fas fa-id-card"></i> 学号</label>
+                    <input type="text" id="borrow-student-id" placeholder="请输入学号">
+                </div>
+                <div class="form-group">
+                    <label for="borrow-student-name"><i class="fas fa-user"></i> 姓名</label>
+                    <input type="text" id="borrow-student-name" placeholder="请输入姓名">
                 </div>
             </div>
             <div class="book-info">
@@ -396,6 +402,10 @@
                 <button class="btn-back" id="return-back"><i class="fas fa-arrow-left"></i> 返回</button>
             </div>
             <div class="return-form">
+                <div class="form-group">
+                    <label for="return-student-id">学号</label>
+                    <input type="text" id="return-student-id" placeholder="请输入学号">
+                </div>
                 <div class="form-group">
                     <label for="return-book-title">书名</label>
                     <input type="text" id="return-book-title" placeholder="请输入书名">
@@ -522,6 +532,41 @@
             </div>
         </div>
     </div>
+    
+    <!-- 批量导入图书模态框 -->
+    <div id="batch-import-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>批量导入图书</h3>
+                <span class="close" id="close-batch-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="batch-import-container">
+                    <div class="batch-import-header">
+                        <div class="batch-import-title">ISBN号</div>
+                        <div class="batch-import-status">状态</div>
+                        <div class="batch-import-action">操作</div>
+                    </div>
+                    <div id="batch-import-items" class="batch-import-items">
+                        <!-- 动态生成ISBN输入行 -->
+                        <div class="batch-import-item">
+                            <input type="text" class="batch-isbn-input" placeholder="请输入ISBN号">
+                            <div class="batch-status">-</div>
+                            <button class="btn btn-small btn-search-isbn">搜索</button>
+                        </div>
+                    </div>
+                    <div class="batch-import-footer">
+                        <button class="btn btn-secondary" id="add-isbn-row">添加行</button>
+                        <button class="btn btn-primary" id="batch-add-books">批量添加</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-batch-import">取消</button>
+                <button class="btn btn-primary" id="confirm-batch-import">确认导入</button>
+            </div>
+        </div>
+    </div>
 
     <!-- 管理员主页面 -->
     <div id="admin-home" class="page">
@@ -609,18 +654,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="charts-container">
-                        <div class="chart-card">
-                            <h3>近30天借阅趋势</h3>
-                            <canvas id="borrow-trend-chart"></canvas>
+                    <div class="text-stats-container">
+                        <div class="text-stat-card">
+                            <div id="borrow-trend-text"></div>
                         </div>
-                        <div class="chart-card">
-                            <h3>热门书籍TOP10</h3>
-                            <canvas id="popular-books-chart"></canvas>
-                        </div>
-                        <div class="chart-card">
-                            <h3>图书分类分布</h3>
-                            <canvas id="book-category-chart"></canvas>
+                        <div class="text-stat-card">
+                            <div id="popular-books-text"></div>
                         </div>
                     </div>
                 </div>
@@ -632,6 +671,7 @@
                         <div class="page-actions">
                             <button class="btn btn-primary"><i class="fas fa-plus"></i> 添加图书</button>
                             <button class="btn btn-secondary"><i class="fas fa-upload"></i> 批量导入</button>
+                            <button class="btn btn-secondary"><i class="fas fa-download"></i> 导出报表</button>
                         </div>
                     </div>
                     <div class="search-filter">
@@ -657,6 +697,9 @@
                 <div id="readers" class="admin-page">
                     <div class="page-header">
                         <h2>读者管理</h2>
+                        <div class="page-actions">
+                            <button class="btn btn-secondary"><i class="fas fa-download"></i> 导出报表</button>
+                        </div>
                     </div>
                     <div class="reader-management">
                         <div class="reader-tree" id="reader-tree"></div>
@@ -712,10 +755,10 @@
                         <div class="setting-group">
                             <h3>公告管理</h3>
                             <div style="margin-bottom: 10px;">
-                                <label for="announcement-title">标题：</label>
-                                <input type="text" id="announcement-title" placeholder="公告标题" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 10px;">
+                                <label for="publish-announcement-title">标题：</label>
+                                <input type="text" id="publish-announcement-title" placeholder="公告标题" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 10px;">
                             </div>
-                            <textarea id="announcement-content" placeholder="发布公告..." style="width: 100%; padding: 10px; height: 150px; margin-bottom: 10px;"></textarea>
+                            <textarea id="publish-announcement-content" placeholder="发布公告..." style="width: 100%; padding: 10px; height: 150px; margin-bottom: 10px;"></textarea>
                             <button class="btn btn-primary" id="publish-announcement-btn">发布</button>
                         </div>
                     </div>
