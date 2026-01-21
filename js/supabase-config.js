@@ -1,6 +1,6 @@
-// Supabase配置文件
-export const supabaseUrl = 'https://yzhnrtinfztdumfzuxvk.supabase.co';
-export const supabaseKey = 'sb_publishable_yebBr2U45Y5yWMUzNcaBkw_NRaAwZEM';
+// Supabase配置文件 - 生产环境中应使用环境变量存储这些值
+export const supabaseUrl = 'https://your-supabase-url.supabase.co';
+export const supabaseKey = 'your-supabase-publishable-key';
 
 // 初始化Supabase客户端 - 使用模拟客户端，因为Supabase SDK无法在模块中直接使用CDN引入
 // 在生产环境中，应该使用npm安装supabase-js并通过import语法导入
