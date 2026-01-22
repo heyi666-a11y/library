@@ -1,6 +1,39 @@
-// 导入Supabase配置和服务
-import { supabaseUrl, supabaseKey } from './supabase-config.js';
-import { bookService, readerService, borrowRecordService, announcementService, authService, statsService } from './supabase-service.js';
+// 注意：该文件现在作为普通脚本加载，不再是ES模块
+// 移除了import语句，使用全局变量或直接引用
+
+// 定义Supabase配置
+const supabaseUrl = 'https://yzhnrtinfztdumfzuxvk.supabase.co';
+const supabaseKey = 'sb_publishable_yebBr2U45Y5yWMUzNcaBkw_NRaAwZEM';
+
+// 定义服务对象，将在后续加载supabase-service.js后可用
+let bookService, readerService, borrowRecordService, announcementService, authService, statsService;
+
+// 加载supabase-service.js
+(function() {
+    const serviceScript = document.createElement('script');
+    serviceScript.src = 'js/supabase-service.js';
+    serviceScript.onload = function() {
+        console.log('supabase-service.js加载完成');
+        // 服务对象将通过全局作用域提供
+        bookService = window.bookService;
+        readerService = window.readerService;
+        borrowRecordService = window.borrowRecordService;
+        announcementService = window.announcementService;
+        authService = window.authService;
+        statsService = window.statsService;
+        console.log('服务对象初始化完成');
+        
+        // 服务对象加载完成后，检查Supabase客户端是否已初始化
+        // 如果已初始化，立即加载数据
+        if (supabase) {
+            console.log('Supabase客户端已初始化，开始加载数据...');
+            initData();
+        } else {
+            console.log('Supabase客户端尚未初始化，等待初始化完成后再加载数据');
+        }
+    };
+    document.head.appendChild(serviceScript);
+})();
 
 // 安全初始化Supabase客户端 - 重点修复：确保能正确获取createClient函数
 let supabase = null;
@@ -49,6 +82,15 @@ window.initSupabase = function() {
                 supabase = createClient(supabaseUrl, supabaseKey);
                 window.supabaseInstance = supabase;
                 console.log('Supabase客户端延迟初始化成功');
+                
+                // 检查服务对象是否已经初始化
+                if (bookService && readerService && borrowRecordService && announcementService && authService && statsService) {
+                    console.log('服务对象已就绪，开始加载数据...');
+                    initData();
+                } else {
+                    console.log('服务对象尚未就绪，等待服务对象加载完成后再加载数据');
+                }
+                
                 return true;
             }
         } catch (error) {
@@ -79,6 +121,120 @@ const adminPages = document.querySelectorAll('.admin-page');
 
 // 图书馆系统初始化
 console.log('图书馆系统初始化中...');
+
+// 定义图书馆事件监听器初始化函数
+function initLibraryEventListeners() {
+    console.log('开始初始化图书馆事件监听器...');
+    
+    // 图书馆入口页面按钮事件
+    const enterStudentLibraryBtn = document.getElementById('enter-student-library');
+    if (enterStudentLibraryBtn) {
+        enterStudentLibraryBtn.onclick = function() {
+            console.log('学生入口按钮被点击');
+            showPage('student-home');
+        };
+    }
+    
+    const enterAdminLibraryBtn = document.getElementById('enter-admin-library');
+    if (enterAdminLibraryBtn) {
+        enterAdminLibraryBtn.onclick = function() {
+            console.log('管理员入口按钮被点击');
+            showPage('admin-login-page');
+        };
+    }
+    
+    // 返回主系统按钮
+    const backToMainBtn = document.getElementById('back-to-main-btn');
+    if (backToMainBtn) {
+        backToMainBtn.onclick = function() {
+            console.log('返回主系统按钮被点击');
+            showPage('home');
+        };
+    }
+    
+    // 学生主页面功能按钮事件
+    bindStudentFunctionButtons();
+    
+    // 各种返回按钮事件
+    const backToStudentHomeBtn = document.getElementById('back-to-student-home');
+    if (backToStudentHomeBtn) {
+        backToStudentHomeBtn.onclick = function() {
+            console.log('返回学生主页面按钮被点击');
+            showPage('student-home');
+        };
+    }
+    
+    const searchBackBtn = document.getElementById('search-back');
+    if (searchBackBtn) {
+        searchBackBtn.onclick = function() {
+            console.log('搜索页面返回按钮被点击');
+            showPage('student-home');
+        };
+    }
+    
+    const backToHomeBtn = document.getElementById('back-to-home');
+    if (backToHomeBtn) {
+        backToHomeBtn.onclick = function() {
+            console.log('借书页面返回按钮被点击');
+            showPage('student-home');
+        };
+    }
+    
+    const returnBackBtn = document.getElementById('return-back');
+    if (returnBackBtn) {
+        returnBackBtn.onclick = function() {
+            console.log('还书页面返回按钮被点击');
+            showPage('student-home');
+        };
+    }
+    
+    // 管理员登录按钮事件
+    const adminLoginSubmitBtn = document.getElementById('admin-login-submit');
+    if (adminLoginSubmitBtn) {
+        adminLoginSubmitBtn.onclick = function() {
+            console.log('管理员登录按钮被点击');
+            adminLogin();
+        };
+    }
+    
+    // 返回首页按钮
+    const backToHomePageBtn = document.getElementById('back-to-home-btn');
+    if (backToHomePageBtn) {
+        backToHomePageBtn.onclick = function() {
+            console.log('管理员登录页面返回首页按钮被点击');
+            showPage('library-entry');
+        };
+    }
+    
+    // 管理员退出按钮事件
+    const adminLogoutBtn = document.getElementById('admin-logout');
+    if (adminLogoutBtn) {
+        adminLogoutBtn.onclick = function() {
+            console.log('管理员退出按钮被点击');
+            logout();
+        };
+    }
+    
+    // 确认借书按钮事件
+    const confirmBorrowBtn = document.getElementById('confirm-borrow-btn');
+    if (confirmBorrowBtn) {
+        confirmBorrowBtn.onclick = function() {
+            console.log('确认借书按钮被点击');
+            confirmBorrow();
+        };
+    }
+    
+    // 确认还书按钮事件
+    const confirmReturnBtn = document.getElementById('confirm-return-btn');
+    if (confirmReturnBtn) {
+        confirmReturnBtn.onclick = function() {
+            console.log('确认还书按钮被点击');
+            confirmReturn();
+        };
+    }
+    
+    console.log('图书馆事件监听器初始化完成');
+}
 
 // 确保initLibraryEventListeners函数可用
 window.initLibraryEventListeners = initLibraryEventListeners;
@@ -214,6 +370,12 @@ async function initData() {
         return;
     }
     
+    // 检查服务对象是否已经初始化
+    if (!bookService || !readerService || !borrowRecordService || !announcementService) {
+        console.log('服务对象未初始化，跳过数据加载');
+        return;
+    }
+    
     try {
         // 从Supabase获取数据
         console.log('开始初始化数据...');
@@ -247,6 +409,9 @@ async function initData() {
         }
     }
 }
+
+// 将initData函数暴露到全局作用域，以便在index.html中调用
+window.initData = initData;
 
 
 
