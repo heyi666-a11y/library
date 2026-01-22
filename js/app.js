@@ -96,11 +96,43 @@ window.initSupabase = function() {
                 console.log('Supabase客户端延迟初始化成功');
                 
                 // 检查服务对象是否已经初始化
+                console.log('检查服务对象初始化状态...');
+                console.log('bookService:', typeof bookService);
+                console.log('readerService:', typeof readerService);
+                console.log('borrowRecordService:', typeof borrowRecordService);
+                console.log('announcementService:', typeof announcementService);
+                console.log('authService:', typeof authService);
+                console.log('statsService:', typeof statsService);
+                
                 if (bookService && readerService && borrowRecordService && announcementService && authService && statsService) {
                     console.log('服务对象已就绪，开始加载数据...');
                     initData();
                 } else {
                     console.log('服务对象尚未就绪，等待服务对象加载完成后再加载数据');
+                    // 尝试从全局作用域重新获取服务对象
+                    if (typeof window.bookService !== 'undefined') {
+                        bookService = window.bookService;
+                    }
+                    if (typeof window.readerService !== 'undefined') {
+                        readerService = window.readerService;
+                    }
+                    if (typeof window.borrowRecordService !== 'undefined') {
+                        borrowRecordService = window.borrowRecordService;
+                    }
+                    if (typeof window.announcementService !== 'undefined') {
+                        announcementService = window.announcementService;
+                    }
+                    if (typeof window.authService !== 'undefined') {
+                        authService = window.authService;
+                    }
+                    if (typeof window.statsService !== 'undefined') {
+                        statsService = window.statsService;
+                    }
+                    // 再次检查服务对象是否就绪
+                    if (bookService && readerService && borrowRecordService && announcementService && authService && statsService) {
+                        console.log('服务对象已就绪，开始加载数据...');
+                        initData();
+                    }
                 }
                 
                 return true;
@@ -372,6 +404,8 @@ function bindStudentFunctionButtons() {
 
 // 初始化数据
 async function initData() {
+    console.log('尝试初始化数据...');
+    
     // 检查Supabase客户端是否已经正确初始化
     if (!supabase) {
         console.log('Supabase客户端未初始化，跳过数据加载');
@@ -384,8 +418,20 @@ async function initData() {
     }
     
     // 检查服务对象是否已经初始化
-    if (!bookService || !readerService || !borrowRecordService || !announcementService) {
-        console.log('服务对象未初始化，跳过数据加载');
+    if (!bookService) {
+        console.log('bookService未初始化，跳过数据加载');
+        return;
+    }
+    if (!readerService) {
+        console.log('readerService未初始化，跳过数据加载');
+        return;
+    }
+    if (!borrowRecordService) {
+        console.log('borrowRecordService未初始化，跳过数据加载');
+        return;
+    }
+    if (!announcementService) {
+        console.log('announcementService未初始化，跳过数据加载');
         return;
     }
     

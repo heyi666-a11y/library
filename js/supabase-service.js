@@ -2,14 +2,8 @@
 // 封装所有与Supabase的交互逻辑
 // 该文件作为普通脚本加载，将服务对象暴露到全局作用域
 
-// 注意：该文件依赖于外部提供的supabase变量
-// 该变量将在app.js中初始化并传递给全局作用域
-let supabase;
-
-// 检查是否在全局作用域中已经有supabase实例
-if (typeof window !== 'undefined' && window.supabaseInstance) {
-    supabase = window.supabaseInstance;
-}
+// 直接使用全局supabaseInstance对象，避免重复声明
+let supabase = typeof window !== 'undefined' ? window.supabaseInstance : null;
 
 // 检查supabase是否可用的辅助函数
 function isSupabaseAvailable() {
