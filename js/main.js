@@ -81,6 +81,32 @@ function initEventListeners() {
         document.querySelector('.nav-menu .nav-item[data-page="home"]')?.classList.add('active');
     });
     
+    // 返回按钮事件监听器 - 修复返回键无法返回的问题
+    // 借书页面返回按钮
+    document.getElementById('back-to-home')?.addEventListener('click', () => {
+        showPage('student-home');
+    });
+    
+    // 还书页面返回按钮
+    document.getElementById('return-back')?.addEventListener('click', () => {
+        showPage('student-home');
+    });
+    
+    // 搜索页面返回按钮
+    document.getElementById('search-back')?.addEventListener('click', () => {
+        showPage('student-home');
+    });
+    
+    // 图书馆页面返回按钮
+    document.getElementById('back-to-student-home')?.addEventListener('click', () => {
+        showPage('student-home');
+    });
+    
+    // 管理员登录页面返回按钮
+    document.getElementById('back-to-home-btn')?.addEventListener('click', () => {
+        showPage('home');
+    });
+    
     console.log('总系统事件监听器初始化完成');
 }
 
