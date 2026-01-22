@@ -2,18 +2,61 @@
 import { supabaseUrl, supabaseKey } from './supabase-config.js';
 import { bookService, readerService, borrowRecordService, announcementService, authService, statsService } from './supabase-service.js';
 
-// 安全初始化Supabase客户端 - 重点修复：即使初始化失败，也不影响页面功能
+// 安全初始化Supabase客户端 - 重点修复：确保能正确获取createClient函数
 let supabase = null;
-try {
-    const { createClient } = window.supabase;
-    supabase = createClient(supabaseUrl, supabaseKey);
-    window.supabaseInstance = supabase;
-    console.log('Supabase客户端初始化成功');
-} catch (error) {
-    console.error('Supabase客户端初始化失败:', error);
-    // 忽略错误，继续执行，确保页面功能可用
-    console.log('Supabase初始化失败，但页面功能仍可使用');
+
+// 检查window.supabase对象是否已存在
+if (typeof window !== 'undefined' && window.supabase) {
+    try {
+        const { createClient } = window.supabase;
+        if (typeof createClient === 'function') {
+            supabase = createClient(supabaseUrl, supabaseKey);
+            window.supabaseInstance = supabase;
+            console.log('Supabase客户端初始化成功');
+        } else {
+            console.error('Supabase SDK已加载，但createClient函数不可用:', typeof createClient);
+        }
+    } catch (error) {
+        console.error('Supabase客户端初始化失败:', error);
+    }
+} else {
+    // 如果window.supabase不存在，尝试直接使用全局supabase对象
+    // 这是为了兼容不同的Supabase SDK加载方式
+    try {
+        // 尝试另一种方式获取createClient函数
+        if (typeof Supabase !== 'undefined') {
+            const { createClient } = Supabase;
+            supabase = createClient(supabaseUrl, supabaseKey);
+            window.supabaseInstance = supabase;
+            console.log('Supabase客户端初始化成功（使用全局Supabase对象）');
+        } else {
+            console.warn('Supabase SDK尚未加载，将在需要时初始化');
+        }
+    } catch (error) {
+        console.error('Supabase客户端初始化失败:', error);
+    }
 }
+
+// 确保页面功能可用
+console.log('Supabase初始化完成，页面功能仍可使用');
+
+// 为后续动态加载提供初始化函数
+window.initSupabase = function() {
+    if (!supabase && typeof window.supabase !== 'undefined') {
+        try {
+            const { createClient } = window.supabase;
+            if (typeof createClient === 'function') {
+                supabase = createClient(supabaseUrl, supabaseKey);
+                window.supabaseInstance = supabase;
+                console.log('Supabase客户端延迟初始化成功');
+                return true;
+            }
+        } catch (error) {
+            console.error('Supabase延迟初始化失败:', error);
+        }
+    }
+    return false;
+};
 
 // 全局变量
 let currentUser = null;
@@ -1748,6 +1791,46 @@ async function initLibraryEventListeners() {
             closeAnnouncementBtn.onclick = closeAnnouncement;
             console.log('关闭公告事件监听器绑定成功');
         }
+        
+        // 管理员侧边栏导航事件 - 重点修复：确保能切换到所有管理员页面
+        const adminNavItems = document.querySelectorAll('.sidebar-nav .nav-item');
+        if (adminNavItems.length > 0) {
+            adminNavItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pageId = item.getAttribute('data-page');
+                    console.log(`切换到管理员页面: ${pageId}`);
+                    
+                    // 使用showAdminPage函数切换页面
+                    showAdminPage(pageId);
+                    
+                    // 更新导航状态
+                    adminNavItems.forEach(nav => {
+                        nav.classList.remove('active');
+                    });
+                    item.classList.add('active');
+                });
+            });
+            console.log('管理员侧边栏导航事件监听器绑定成功');
+        } else {
+            console.log('管理员侧边栏导航项未找到，可能尚未加载到DOM中');
+        }
+        
+        // 管理员页面返回按钮
+        const adminLogoutBtn = document.getElementById('admin-logout');
+        if (adminLogoutBtn) {
+            adminLogoutBtn.onclick = function(e) {
+                e.preventDefault();
+                console.log('管理员退出登录');
+                logout();
+            };
+            console.log('管理员退出登录事件监听器绑定成功');
+        } else {
+            console.log('管理员退出登录按钮未找到');
+        }
+        
+        // 确保管理员页面功能正常
+        console.log('管理员页面功能初始化完成');
         
         console.log('图书馆系统事件监听器绑定完成');
         
