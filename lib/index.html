@@ -775,18 +775,31 @@
             const enterLibraryBtn = document.getElementById('enter-library-btn');
             if (enterLibraryBtn) {
                 enterLibraryBtn.addEventListener('click', function() {
+                    console.log('图书馆入口按钮被点击，开始加载图书馆系统...');
+                    
+                    // 先切换到图书馆入口页面
+                    if (typeof window.showPage === 'function') {
+                        window.showPage('library-entry');
+                    }
+                    
                     // 检查Supabase SDK是否已经加载
                     if (typeof window.supabase === 'undefined') {
                         // 加载Supabase SDK
+                        console.log('Supabase SDK未加载，开始加载...');
                         const supabaseScript = document.createElement('script');
                         supabaseScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
                         supabaseScript.onload = function() {
+                            console.log('Supabase SDK加载完成');
                             // SDK加载完成后，加载图书馆系统相关文件
                             loadLibrarySystem();
+                        };
+                        supabaseScript.onerror = function() {
+                            console.error('Supabase SDK加载失败');
                         };
                         document.body.appendChild(supabaseScript);
                     } else {
                         // Supabase SDK已经加载，直接加载图书馆系统
+                        console.log('Supabase SDK已加载，直接加载图书馆系统');
                         loadLibrarySystem();
                     }
                 });
@@ -797,15 +810,69 @@
         function loadLibrarySystem() {
             // 检查图书馆系统是否已经加载
             if (typeof window.librarySystemLoaded === 'undefined') {
-                // 加载app.js（图书馆系统功能）
+                console.log('开始加载图书馆系统相关文件...');
+                
+                // 加载app.js（图书馆系统功能）作为普通脚本，确保能访问全局对象
                 const appScript = document.createElement('script');
                 appScript.src = 'js/app.js';
-                appScript.type = 'module';
                 appScript.onload = function() {
+                    console.log('app.js加载完成');
                     // 设置加载标志，防止重复加载
                     window.librarySystemLoaded = true;
+                    
+                    // 显式初始化Supabase客户端，确保SDK完全加载后再初始化
+                    console.log('开始初始化Supabase客户端...');
+                    
+                    // 调用app.js中定义的延迟初始化函数
+                    if (typeof window.initSupabase === 'function') {
+                        const success = window.initSupabase();
+                        if (success) {
+                            console.log('Supabase客户端初始化成功！');
+                            
+                            // 显式调用initData函数，确保数据加载
+                            if (typeof window.initData === 'function') {
+                                console.log('开始加载数据...');
+                                window.initData();
+                            }
+                        } else {
+                            console.warn('Supabase客户端初始化失败，将尝试手动初始化...');
+                            
+                            // 手动初始化Supabase客户端
+                            try {
+                                if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+                                    // 直接使用全局window.supabase对象初始化客户端
+                                    const { createClient } = window.supabase;
+                                    const supabaseUrl = 'https://yzhnrtinfztdumfzuxvk.supabase.co';
+                                    const supabaseKey = 'sb_publishable_yebBr2U45Y5yWMUzNcaBkw_NRaAwZEM';
+                                    const supabaseInstance = createClient(supabaseUrl, supabaseKey);
+                                    window.supabaseInstance = supabaseInstance;
+                                    console.log('Supabase客户端手动初始化成功！');
+                                    
+                                    // 手动调用initData函数
+                                    if (typeof window.initData === 'function') {
+                                        console.log('开始加载数据...');
+                                        window.initData();
+                                    }
+                                } else {
+                                    console.error('Supabase SDK已加载，但createClient函数不可用');
+                                }
+                            } catch (error) {
+                                console.error('手动初始化Supabase客户端失败:', error);
+                            }
+                        }
+                    }
+                };
+                appScript.onerror = function() {
+                    console.error('app.js加载失败');
                 };
                 document.body.appendChild(appScript);
+            } else {
+                console.log('图书馆系统已加载，直接使用');
+                // 如果系统已加载，确保数据已初始化
+                if (typeof window.initData === 'function') {
+                    console.log('图书馆系统已加载，检查并更新数据...');
+                    window.initData();
+                }
             }
         }
     </script>
