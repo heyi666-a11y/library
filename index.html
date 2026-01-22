@@ -753,29 +753,55 @@
 
     <!-- Chart.js - 禁用source map以避免404错误 -->
     <script>
-        // 禁用Chart.js source map加载
-        window.Chart = window.Chart || {};
-        window.Chart.defaults = window.Chart.defaults || {};
-        window.Chart.defaults.plugins = window.Chart.defaults.plugins || {};
-        window.Chart.defaults.plugins.legend = window.Chart.defaults.plugins.legend || {};
-        // 通过设置全局配置来禁用source map
-        if (typeof window.SourceMapConsumer === 'undefined') {
-            window.SourceMapConsumer = null;
-        }
-        // 禁用所有script的source map加载
-        const originalScriptSrc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
-        if (originalScriptSrc) {
-            Object.defineProperty(HTMLScriptElement.prototype, 'src', {
-                set: function(value) {
-                    // 如果是Chart.js相关的脚本，添加crossorigin和integrity属性，或者修改src以避免加载source map
-                    if (value.includes('chart.min.js')) {
-                        this.setAttribute('crossorigin', 'anonymous');
-                    }
-                    originalScriptSrc.set.call(this, value);
-                },
-                get: originalScriptSrc.get
-            });
-        }
+        // 彻底禁用所有source map加载
+        (function() {
+            // 1. 禁用SourceMapConsumer
+            if (typeof window !== 'undefined') {
+                window.SourceMapConsumer = undefined;
+                window.SourceMapGenerator = undefined;
+                window.SourceMapTransformer = undefined;
+            }
+            
+            // 2. 重写Error.prepareStackTrace以忽略source map
+            if (typeof Error !== 'undefined' && typeof Error.prepareStackTrace === 'function') {
+                Error.prepareStackTrace = function(error, stack) {
+                    return error.toString();
+                };
+            }
+            
+            // 3. 禁用script标签的sourceMappingURL注释
+            const originalAppendChild = Element.prototype.appendChild;
+            Element.prototype.appendChild = function(node) {
+                if (node.tagName === 'SCRIPT' && node.textContent) {
+                    // 移除脚本内容中的sourceMappingURL注释
+                    node.textContent = node.textContent.replace(/\/\/\s*#\s*sourceMappingURL\s*=\s*[^\n]+/g, '');
+                }
+                return originalAppendChild.call(this, node);
+            };
+            
+            // 4. 禁用动态脚本创建时的source map
+            const originalCreateElement = document.createElement;
+            document.createElement = function(tagName) {
+                const element = originalCreateElement.call(this, tagName);
+                if (tagName === 'SCRIPT') {
+                    // 保存原始setAttribute方法
+                    const originalSetAttribute = element.setAttribute;
+                    element.setAttribute = function(name, value) {
+                        // 如果是src属性，确保不包含source map
+                        if (name === 'src' && value) {
+                            // 移除URL中的source map参数
+                            value = value.replace(/[?&]sourceMap=[^&]+/g, '');
+                            // 确保不加载.map文件
+                            if (value.endsWith('.map')) {
+                                return;
+                            }
+                        }
+                        return originalSetAttribute.call(this, name, value);
+                    };
+                }
+                return element;
+            };
+        })();
     </script>
     <script src="lib/chart.min.js" crossorigin="anonymous"></script>
     
