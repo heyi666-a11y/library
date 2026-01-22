@@ -1721,14 +1721,25 @@ async function initEventListeners() {
         // ISBN搜索功能
         document.getElementById('search-isbn-btn')?.addEventListener('click', searchISBN);
         
-        // 最后初始化数据，不阻塞事件监听器绑定
-        console.log('初始化数据...');
-        await initData();
-        console.log('数据初始化完成');
+        console.log('事件监听器绑定完成');
         
     } catch (error) {
         console.error('事件监听器初始化失败:', error);
         // 即使事件监听器初始化失败，也不抛出错误，确保页面可以访问
+    }
+    
+    // 数据初始化 - 独立执行，不影响事件监听器
+    try {
+        console.log('初始化数据...');
+        await initData();
+        console.log('数据初始化完成');
+    } catch (error) {
+        console.error('初始化数据失败:', error);
+        // 初始化空数组，避免系统崩溃
+        announcements = [];
+        books = [];
+        readers = [];
+        borrowRecords = [];
     }
 }
 
