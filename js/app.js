@@ -1,6 +1,18 @@
 // 注意：该文件现在作为普通脚本加载，不再是ES模块
 // 移除了import语句，使用全局变量或直接引用
 
+// 添加自我检查，防止重复执行
+if (typeof window.appJsLoaded !== 'undefined') {
+    console.log('app.js已加载，防止重复执行');
+    // 直接退出，避免重复定义函数
+    // 使用return语句退出脚本执行
+    void(0);
+} else {
+    // 设置加载标志
+    window.appJsLoaded = true;
+    console.log('app.js开始执行，设置加载标志');
+}
+
 // 定义Supabase配置
 const supabaseUrl = 'https://yzhnrtinfztdumfzuxvk.supabase.co';
 const supabaseKey = 'sb_publishable_yebBr2U45Y5yWMUzNcaBkw_NRaAwZEM';
@@ -122,122 +134,123 @@ const adminPages = document.querySelectorAll('.admin-page');
 // 图书馆系统初始化
 console.log('图书馆系统初始化中...');
 
-// 定义图书馆事件监听器初始化函数
-function initLibraryEventListeners() {
-    console.log('开始初始化图书馆事件监听器...');
-    
-    // 图书馆入口页面按钮事件
-    const enterStudentLibraryBtn = document.getElementById('enter-student-library');
-    if (enterStudentLibraryBtn) {
-        enterStudentLibraryBtn.onclick = function() {
-            console.log('学生入口按钮被点击');
-            showPage('student-home');
-        };
-    }
-    
-    const enterAdminLibraryBtn = document.getElementById('enter-admin-library');
-    if (enterAdminLibraryBtn) {
-        enterAdminLibraryBtn.onclick = function() {
-            console.log('管理员入口按钮被点击');
-            showPage('admin-login-page');
-        };
-    }
-    
-    // 返回主系统按钮
-    const backToMainBtn = document.getElementById('back-to-main-btn');
-    if (backToMainBtn) {
-        backToMainBtn.onclick = function() {
-            console.log('返回主系统按钮被点击');
-            showPage('home');
-        };
-    }
-    
-    // 学生主页面功能按钮事件
-    bindStudentFunctionButtons();
-    
-    // 各种返回按钮事件
-    const backToStudentHomeBtn = document.getElementById('back-to-student-home');
-    if (backToStudentHomeBtn) {
-        backToStudentHomeBtn.onclick = function() {
-            console.log('返回学生主页面按钮被点击');
-            showPage('student-home');
-        };
-    }
-    
-    const searchBackBtn = document.getElementById('search-back');
-    if (searchBackBtn) {
-        searchBackBtn.onclick = function() {
-            console.log('搜索页面返回按钮被点击');
-            showPage('student-home');
-        };
-    }
-    
-    const backToHomeBtn = document.getElementById('back-to-home');
-    if (backToHomeBtn) {
-        backToHomeBtn.onclick = function() {
-            console.log('借书页面返回按钮被点击');
-            showPage('student-home');
-        };
-    }
-    
-    const returnBackBtn = document.getElementById('return-back');
-    if (returnBackBtn) {
-        returnBackBtn.onclick = function() {
-            console.log('还书页面返回按钮被点击');
-            showPage('student-home');
-        };
-    }
-    
-    // 管理员登录按钮事件
-    const adminLoginSubmitBtn = document.getElementById('admin-login-submit');
-    if (adminLoginSubmitBtn) {
-        adminLoginSubmitBtn.onclick = function() {
-            console.log('管理员登录按钮被点击');
-            adminLogin();
-        };
-    }
-    
-    // 返回首页按钮
-    const backToHomePageBtn = document.getElementById('back-to-home-btn');
-    if (backToHomePageBtn) {
-        backToHomePageBtn.onclick = function() {
-            console.log('管理员登录页面返回首页按钮被点击');
-            showPage('library-entry');
-        };
-    }
-    
-    // 管理员退出按钮事件
-    const adminLogoutBtn = document.getElementById('admin-logout');
-    if (adminLogoutBtn) {
-        adminLogoutBtn.onclick = function() {
-            console.log('管理员退出按钮被点击');
-            logout();
-        };
-    }
-    
-    // 确认借书按钮事件
-    const confirmBorrowBtn = document.getElementById('confirm-borrow-btn');
-    if (confirmBorrowBtn) {
-        confirmBorrowBtn.onclick = function() {
-            console.log('确认借书按钮被点击');
-            confirmBorrow();
-        };
-    }
-    
-    // 确认还书按钮事件
-    const confirmReturnBtn = document.getElementById('confirm-return-btn');
-    if (confirmReturnBtn) {
-        confirmReturnBtn.onclick = function() {
-            console.log('确认还书按钮被点击');
-            confirmReturn();
-        };
-    }
-    
-    console.log('图书馆事件监听器初始化完成');
+// 定义图书馆事件监听器初始化函数 - 条件定义，防止重复声明
+if (typeof initLibraryEventListeners !== 'function') {
+    window.initLibraryEventListeners = function() {
+        console.log('开始初始化图书馆事件监听器...');
+        
+        // 图书馆入口页面按钮事件
+        const enterStudentLibraryBtn = document.getElementById('enter-student-library');
+        if (enterStudentLibraryBtn) {
+            enterStudentLibraryBtn.onclick = function() {
+                console.log('学生入口按钮被点击');
+                showPage('student-home');
+            };
+        }
+        
+        const enterAdminLibraryBtn = document.getElementById('enter-admin-library');
+        if (enterAdminLibraryBtn) {
+            enterAdminLibraryBtn.onclick = function() {
+                console.log('管理员入口按钮被点击');
+                showPage('admin-login-page');
+            };
+        }
+        
+        // 返回主系统按钮
+        const backToMainBtn = document.getElementById('back-to-main-btn');
+        if (backToMainBtn) {
+            backToMainBtn.onclick = function() {
+                console.log('返回主系统按钮被点击');
+                showPage('home');
+            };
+        }
+        
+        // 学生主页面功能按钮事件
+        bindStudentFunctionButtons();
+        
+        // 各种返回按钮事件
+        const backToStudentHomeBtn = document.getElementById('back-to-student-home');
+        if (backToStudentHomeBtn) {
+            backToStudentHomeBtn.onclick = function() {
+                console.log('返回学生主页面按钮被点击');
+                showPage('student-home');
+            };
+        }
+        
+        const searchBackBtn = document.getElementById('search-back');
+        if (searchBackBtn) {
+            searchBackBtn.onclick = function() {
+                console.log('搜索页面返回按钮被点击');
+                showPage('student-home');
+            };
+        }
+        
+        const backToHomeBtn = document.getElementById('back-to-home');
+        if (backToHomeBtn) {
+            backToHomeBtn.onclick = function() {
+                console.log('借书页面返回按钮被点击');
+                showPage('student-home');
+            };
+        }
+        
+        const returnBackBtn = document.getElementById('return-back');
+        if (returnBackBtn) {
+            returnBackBtn.onclick = function() {
+                console.log('还书页面返回按钮被点击');
+                showPage('student-home');
+            };
+        }
+        
+        // 管理员登录按钮事件
+        const adminLoginSubmitBtn = document.getElementById('admin-login-submit');
+        if (adminLoginSubmitBtn) {
+            adminLoginSubmitBtn.onclick = function() {
+                console.log('管理员登录按钮被点击');
+                adminLogin();
+            };
+        }
+        
+        // 返回首页按钮
+        const backToHomePageBtn = document.getElementById('back-to-home-btn');
+        if (backToHomePageBtn) {
+            backToHomePageBtn.onclick = function() {
+                console.log('管理员登录页面返回首页按钮被点击');
+                showPage('library-entry');
+            };
+        }
+        
+        // 管理员退出按钮事件
+        const adminLogoutBtn = document.getElementById('admin-logout');
+        if (adminLogoutBtn) {
+            adminLogoutBtn.onclick = function() {
+                console.log('管理员退出按钮被点击');
+                logout();
+            };
+        }
+        
+        // 确认借书按钮事件
+        const confirmBorrowBtn = document.getElementById('confirm-borrow-btn');
+        if (confirmBorrowBtn) {
+            confirmBorrowBtn.onclick = function() {
+                console.log('确认借书按钮被点击');
+                confirmBorrow();
+            };
+        }
+        
+        // 确认还书按钮事件
+        const confirmReturnBtn = document.getElementById('confirm-return-btn');
+        if (confirmReturnBtn) {
+            confirmReturnBtn.onclick = function() {
+                console.log('确认还书按钮被点击');
+                confirmReturn();
+            };
+        }
+        
+        console.log('图书馆事件监听器初始化完成');
+    };
 }
 
-// 确保initLibraryEventListeners函数可用
-window.initLibraryEventListeners = initLibraryEventListeners;
+// initLibraryEventListeners函数已在条件语句中直接赋值给window对象，无需再次赋值
 
 // 当app.js加载完成后，初始化图书馆系统功能
 window.initLibrarySystem = function() {
