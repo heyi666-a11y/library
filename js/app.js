@@ -1,5 +1,13 @@
-// 导入Supabase服务
+// 导入Supabase配置和服务
+import { supabaseUrl, supabaseKey } from './supabase-config.js';
 import { bookService, readerService, borrowRecordService, announcementService, authService, statsService } from './supabase-service.js';
+
+// 初始化Supabase客户端
+const { createClient } = window.supabase;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// 将supabase客户端传递给全局作用域，供supabase-service.js使用
+window.supabaseInstance = supabase;
 
 // 全局变量
 let currentUser = null;
@@ -16,6 +24,17 @@ let borrowRecords = [];
 // DOM元素
 const pages = document.querySelectorAll('.page');
 const adminPages = document.querySelectorAll('.admin-page');
+
+// 图书馆系统初始化
+console.log('图书馆系统初始化中...');
+// 当app.js加载完成后，初始化图书馆系统功能
+initLibrarySystem();
+
+// 初始化图书馆系统
+function initLibrarySystem() {
+    console.log('图书馆系统初始化完成');
+    // 可以在这里添加图书馆系统的初始化代码
+}
 
 // 初始化数据
 async function initData() {

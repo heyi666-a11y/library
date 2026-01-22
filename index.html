@@ -758,6 +758,38 @@
     <!-- 图书馆系统功能 - 按需加载，单独处理Supabase依赖 -->
     <script>
         // 图书馆系统将在用户进入图书馆功能时动态加载
+        // 当用户点击图书馆入口按钮时，加载Supabase SDK和相关文件
+        document.addEventListener('DOMContentLoaded', function() {
+            // 图书馆入口按钮
+            const enterLibraryBtn = document.getElementById('enter-library-btn');
+            if (enterLibraryBtn) {
+                enterLibraryBtn.addEventListener('click', function() {
+                    // 检查Supabase SDK是否已经加载
+                    if (typeof window.supabase === 'undefined') {
+                        // 加载Supabase SDK
+                        const supabaseScript = document.createElement('script');
+                        supabaseScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+                        supabaseScript.onload = function() {
+                            // SDK加载完成后，加载图书馆系统相关文件
+                            loadLibrarySystem();
+                        };
+                        document.body.appendChild(supabaseScript);
+                    } else {
+                        // Supabase SDK已经加载，直接加载图书馆系统
+                        loadLibrarySystem();
+                    }
+                });
+            }
+        });
+        
+        // 加载图书馆系统相关文件
+        function loadLibrarySystem() {
+            // 加载app.js（图书馆系统功能）
+            const appScript = document.createElement('script');
+            appScript.src = 'js/app.js';
+            appScript.type = 'module';
+            document.body.appendChild(appScript);
+        }
     </script>
 </body>
 </html>

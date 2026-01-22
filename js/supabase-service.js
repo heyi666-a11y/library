@@ -1,8 +1,14 @@
 // Supabase服务封装文件
 // 封装所有与Supabase的交互逻辑
 
-// 导入Supabase客户端
-import { supabase } from './supabase-config.js';
+// 注意：该文件依赖于外部提供的supabase变量
+// 该变量将在app.js中初始化并传递给全局作用域
+let supabase;
+
+// 检查是否在全局作用域中已经有supabase实例
+if (typeof window !== 'undefined' && window.supabaseInstance) {
+    supabase = window.supabaseInstance;
+}
 
 // 数据服务层 - 图书管理
 export const bookService = {
