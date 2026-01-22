@@ -2,12 +2,18 @@
 import { supabaseUrl, supabaseKey } from './supabase-config.js';
 import { bookService, readerService, borrowRecordService, announcementService, authService, statsService } from './supabase-service.js';
 
-// 初始化Supabase客户端
-const { createClient } = window.supabase;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// 将supabase客户端传递给全局作用域，供supabase-service.js使用
-window.supabaseInstance = supabase;
+// 安全初始化Supabase客户端 - 重点修复：即使初始化失败，也不影响页面功能
+let supabase = null;
+try {
+    const { createClient } = window.supabase;
+    supabase = createClient(supabaseUrl, supabaseKey);
+    window.supabaseInstance = supabase;
+    console.log('Supabase客户端初始化成功');
+} catch (error) {
+    console.error('Supabase客户端初始化失败:', error);
+    // 忽略错误，继续执行，确保页面功能可用
+    console.log('Supabase初始化失败，但页面功能仍可使用');
+}
 
 // 全局变量
 let currentUser = null;
@@ -27,12 +33,20 @@ const adminPages = document.querySelectorAll('.admin-page');
 
 // 图书馆系统初始化
 console.log('图书馆系统初始化中...');
+
+// 确保initLibraryEventListeners函数可用
+window.initLibraryEventListeners = initLibraryEventListeners;
+
 // 当app.js加载完成后，初始化图书馆系统功能
 window.initLibrarySystem = function() {
     console.log('图书馆系统初始化中...');
     // 初始化事件监听器
-    window.initLibraryEventListeners();
-    console.log('图书馆系统事件监听器初始化完成');
+    try {
+        initLibraryEventListeners();
+        console.log('图书馆系统事件监听器初始化完成');
+    } catch (error) {
+        console.error('初始化事件监听器失败:', error);
+    }
     console.log('图书馆系统初始化完成');
 };
 
@@ -41,6 +55,97 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', window.initLibrarySystem);
 } else {
     window.initLibrarySystem();
+}
+
+// 重点修复：直接绑定到main.js的showPage函数，确保页面切换时能正确处理
+if (typeof window.showPage === 'function') {
+    // 保存原始showPage函数
+    const originalShowPage = window.showPage;
+    // 重写showPage函数，添加图书馆系统特定处理
+    window.showPage = function(pageId) {
+        // 调用原始showPage函数
+        originalShowPage(pageId);
+        
+        // 如果切换到图书馆入口页面，确保事件监听器已绑定
+        if (pageId === 'library-entry') {
+            console.log('切换到图书馆入口页面，重新初始化事件监听器');
+            setTimeout(() => {
+                try {
+                    initLibraryEventListeners();
+                    console.log('图书馆入口页面事件监听器重新初始化完成');
+                } catch (error) {
+                    console.error('重新初始化事件监听器失败:', error);
+                }
+            }, 100);
+        }
+        
+        // 如果切换到学生主页面，绑定学生功能按钮事件监听器
+        if (pageId === 'student-home') {
+            console.log('切换到学生主页面，绑定功能按钮事件监听器');
+            setTimeout(() => {
+                bindStudentFunctionButtons();
+            }, 100);
+        }
+    };
+}
+
+// 绑定学生功能按钮事件监听器 - 重点修复：直接绑定，确保可靠
+function bindStudentFunctionButtons() {
+    console.log('开始绑定学生功能按钮事件监听器...');
+    
+    // 直接获取元素并绑定事件
+    const borrowBtn = document.getElementById('borrow-btn');
+    const returnBtn = document.getElementById('return-btn');
+    const libraryBtn = document.getElementById('library-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    
+    if (borrowBtn) {
+        borrowBtn.onclick = function() {
+            console.log('借书按钮被点击');
+            if (typeof window.showPage === 'function') {
+                window.showPage('borrow-page');
+            }
+        };
+        console.log('借书按钮事件监听器绑定成功');
+    } else {
+        console.log('借书按钮未找到');
+    }
+    
+    if (returnBtn) {
+        returnBtn.onclick = function() {
+            console.log('还书按钮被点击');
+            if (typeof window.showPage === 'function') {
+                window.showPage('return-page');
+            }
+        };
+        console.log('还书按钮事件监听器绑定成功');
+    } else {
+        console.log('还书按钮未找到');
+    }
+    
+    if (libraryBtn) {
+        libraryBtn.onclick = function() {
+            console.log('查看书库按钮被点击');
+            if (typeof window.showPage === 'function') {
+                window.showPage('library-page');
+            }
+        };
+        console.log('查看书库按钮事件监听器绑定成功');
+    } else {
+        console.log('查看书库按钮未找到');
+    }
+    
+    if (logoutBtn) {
+        logoutBtn.onclick = function() {
+            console.log('退出登录按钮被点击');
+            logout();
+        };
+        console.log('退出登录按钮事件监听器绑定成功');
+    } else {
+        console.log('退出登录按钮未找到');
+    }
+    
+    console.log('学生功能按钮事件监听器绑定完成');
 }
 
 // 初始化数据
