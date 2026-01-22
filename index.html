@@ -762,8 +762,22 @@
         if (typeof window.SourceMapConsumer === 'undefined') {
             window.SourceMapConsumer = null;
         }
+        // 禁用所有script的source map加载
+        const originalScriptSrc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+        if (originalScriptSrc) {
+            Object.defineProperty(HTMLScriptElement.prototype, 'src', {
+                set: function(value) {
+                    // 如果是Chart.js相关的脚本，添加crossorigin和integrity属性，或者修改src以避免加载source map
+                    if (value.includes('chart.min.js')) {
+                        this.setAttribute('crossorigin', 'anonymous');
+                    }
+                    originalScriptSrc.set.call(this, value);
+                },
+                get: originalScriptSrc.get
+            });
+        }
     </script>
-    <script src="lib/chart.min.js"></script>
+    <script src="lib/chart.min.js" crossorigin="anonymous"></script>
     
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
