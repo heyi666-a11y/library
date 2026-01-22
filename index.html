@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+        <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -784,11 +784,18 @@
         
         // 加载图书馆系统相关文件
         function loadLibrarySystem() {
-            // 加载app.js（图书馆系统功能）
-            const appScript = document.createElement('script');
-            appScript.src = 'js/app.js';
-            appScript.type = 'module';
-            document.body.appendChild(appScript);
+            // 检查图书馆系统是否已经加载
+            if (typeof window.librarySystemLoaded === 'undefined') {
+                // 加载app.js（图书馆系统功能）
+                const appScript = document.createElement('script');
+                appScript.src = 'js/app.js';
+                appScript.type = 'module';
+                appScript.onload = function() {
+                    // 设置加载标志，防止重复加载
+                    window.librarySystemLoaded = true;
+                };
+                document.body.appendChild(appScript);
+            }
         }
     </script>
 </body>
