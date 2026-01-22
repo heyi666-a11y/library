@@ -1632,71 +1632,96 @@ async function initLibraryEventListeners() {
         const backToMainBtn = document.getElementById('back-to-main-btn');
         
         if (enterStudentLibraryBtn) {
-            enterStudentLibraryBtn.addEventListener('click', () => {
+            enterStudentLibraryBtn.onclick = function() {
                 console.log('点击了学生入口');
-                showLibraryPage('student-home');
-            });
+                if (typeof window.showPage === 'function') {
+                    window.showPage('student-home');
+                }
+                // 延迟绑定学生功能按钮事件监听器
+                setTimeout(bindStudentFunctionButtons, 100);
+            };
+            console.log('学生入口事件监听器绑定成功');
+        } else {
+            console.log('学生入口按钮未找到');
         }
         
         if (enterAdminLibraryBtn) {
-            enterAdminLibraryBtn.addEventListener('click', () => {
+            enterAdminLibraryBtn.onclick = function() {
                 console.log('点击了管理员入口');
-                showLibraryPage('admin-login-page');
-            });
+                if (typeof window.showPage === 'function') {
+                    window.showPage('admin-login-page');
+                }
+            };
+            console.log('管理员入口事件监听器绑定成功');
+        } else {
+            console.log('管理员入口按钮未找到');
         }
         
         if (backToMainBtn) {
-            backToMainBtn.addEventListener('click', () => {
+            backToMainBtn.onclick = function() {
                 console.log('点击了返回主系统');
-                showLibraryPage('home');
-                // 更新导航状态
-                document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
-                    nav.classList.remove('active');
-                });
-                document.querySelector('.nav-menu .nav-item[data-page="home"]')?.classList.add('active');
-            });
+                if (typeof window.showPage === 'function') {
+                    window.showPage('home');
+                    // 更新导航状态
+                    document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
+                        nav.classList.remove('active');
+                    });
+                    document.querySelector('.nav-menu .nav-item[data-page="home"]')?.classList.add('active');
+                }
+            };
+            console.log('返回主系统事件监听器绑定成功');
+        } else {
+            console.log('返回主系统按钮未找到');
         }
         
         // 管理员登录页面返回首页
         const backToHomeBtn = document.getElementById('back-to-home-btn');
         if (backToHomeBtn) {
-            backToHomeBtn.addEventListener('click', () => {
+            backToHomeBtn.onclick = function() {
                 console.log('点击了返回首页');
-                showLibraryPage('home');
-                // 更新导航状态
-                document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
-                    nav.classList.remove('active');
-                });
-                document.querySelector('.nav-menu .nav-item[data-page="home"]')?.classList.add('active');
-            });
+                if (typeof window.showPage === 'function') {
+                    window.showPage('home');
+                    // 更新导航状态
+                    document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
+                        nav.classList.remove('active');
+                    });
+                    document.querySelector('.nav-menu .nav-item[data-page="home"]')?.classList.add('active');
+                }
+            };
+            console.log('返回首页事件监听器绑定成功');
         }
         
         // 管理员登录提交
         const adminLoginSubmitBtn = document.getElementById('admin-login-submit');
         if (adminLoginSubmitBtn) {
-            adminLoginSubmitBtn.addEventListener('click', adminLogin);
+            adminLoginSubmitBtn.onclick = adminLogin;
+            console.log('管理员登录提交事件监听器绑定成功');
         }
         
         // 登录功能
         const loginBtn = document.getElementById('login-btn');
         if (loginBtn) {
-            loginBtn.addEventListener('click', studentLogin);
+            loginBtn.onclick = studentLogin;
+            console.log('登录按钮事件监听器绑定成功');
         }
         
         // ISBN搜索功能
         const searchIsbnBtn = document.getElementById('search-isbn-btn');
         if (searchIsbnBtn) {
-            searchIsbnBtn.addEventListener('click', searchISBN);
+            searchIsbnBtn.onclick = searchISBN;
+            console.log('ISBN搜索事件监听器绑定成功');
         }
         
         // 公告管理功能
         const publishAnnouncementBtn = document.getElementById('publish-announcement-btn');
         const closeAnnouncementBtn = document.getElementById('close-announcement');
         if (publishAnnouncementBtn) {
-            publishAnnouncementBtn.addEventListener('click', publishAnnouncement);
+            publishAnnouncementBtn.onclick = publishAnnouncement;
+            console.log('发布公告事件监听器绑定成功');
         }
         if (closeAnnouncementBtn) {
-            closeAnnouncementBtn.addEventListener('click', closeAnnouncement);
+            closeAnnouncementBtn.onclick = closeAnnouncement;
+            console.log('关闭公告事件监听器绑定成功');
         }
         
         console.log('图书馆系统事件监听器绑定完成');
