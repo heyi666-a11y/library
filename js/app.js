@@ -21,6 +21,9 @@ let isAdmin = false;
 let currentPage = 'home';
 let currentAdminPage = 'dashboard';
 
+// 标志变量，用于避免事件监听器重复绑定
+let studentButtonsBound = false;
+
 // 数据存储 - 从Supabase获取
 let announcements = [];
 let books = [];
@@ -91,6 +94,12 @@ if (typeof window.showPage === 'function') {
 
 // 绑定学生功能按钮事件监听器 - 重点修复：直接绑定，确保可靠
 function bindStudentFunctionButtons() {
+    // 检查是否已经绑定过事件监听器
+    if (studentButtonsBound) {
+        console.log('学生功能按钮事件监听器已经绑定，跳过重复绑定');
+        return;
+    }
+    
     console.log('开始绑定学生功能按钮事件监听器...');
     
     // 直接获取元素并绑定事件
@@ -144,11 +153,24 @@ function bindStudentFunctionButtons() {
         console.log('退出登录按钮未找到');
     }
     
+    // 标记为已绑定
+    studentButtonsBound = true;
     console.log('学生功能按钮事件监听器绑定完成');
 }
 
 // 初始化数据
 async function initData() {
+    // 检查Supabase客户端是否已经正确初始化
+    if (!supabase) {
+        console.log('Supabase客户端未初始化，跳过数据加载');
+        // 初始化空数组，避免系统崩溃
+        announcements = [];
+        books = [];
+        readers = [];
+        borrowRecords = [];
+        return;
+    }
+    
     try {
         // 从Supabase获取数据
         console.log('开始初始化数据...');
@@ -173,6 +195,9 @@ async function initData() {
         if (error.code === 'PGRST205') {
             // 改为console.error，避免阻塞代码执行
             console.error('数据库表不存在，请先在Supabase控制台执行supabase-schema.sql脚本创建表结构。\n\n错误详情：', error);
+        } else if (error.message.includes('Cannot read property') || error.message.includes('Cannot read properties')) {
+            // 处理Supabase客户端未正确初始化的情况
+            console.error('Supabase客户端未正确初始化，无法加载数据。请检查Supabase配置。\n\n错误详情：', error);
         } else {
             // 改为console.error，避免阻塞代码执行
             console.error('数据初始化失败，请检查网络连接或Supabase配置。\n\n错误详情：', error);
