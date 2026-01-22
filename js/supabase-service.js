@@ -2,8 +2,9 @@
 // 封装所有与Supabase的交互逻辑
 // 该文件作为普通脚本加载，将服务对象暴露到全局作用域
 
-// 直接使用全局supabaseInstance对象，避免重复声明
-let supabase = typeof window !== 'undefined' ? window.supabaseInstance : null;
+// 直接使用全局window.supabaseInstance对象，不进行独立声明
+// 确保只使用全局变量，避免与app.js中的声明冲突
+const supabase = typeof window !== 'undefined' && window.supabaseInstance ? window.supabaseInstance : null;
 
 // 检查supabase是否可用的辅助函数
 function isSupabaseAvailable() {

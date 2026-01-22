@@ -37,7 +37,7 @@ let bookService, readerService, borrowRecordService, announcementService, authSe
         
         // 服务对象加载完成后，检查Supabase客户端是否已初始化
         // 如果已初始化，立即加载数据
-        if (supabase) {
+        if (appSupabase) {
             console.log('Supabase客户端已初始化，开始加载数据...');
             initData();
         } else {
@@ -48,15 +48,19 @@ let bookService, readerService, borrowRecordService, announcementService, authSe
 })();
 
 // 安全初始化Supabase客户端 - 重点修复：确保能正确获取createClient函数
-let supabase = null;
+// 使用appSupabase替代supabase，避免与supabase-service.js中的声明冲突
+let appSupabase = null;
 
 // 检查window.supabase对象是否已存在
 if (typeof window !== 'undefined' && window.supabase) {
     try {
         const { createClient } = window.supabase;
         if (typeof createClient === 'function') {
-            supabase = createClient(supabaseUrl, supabaseKey);
-            window.supabaseInstance = supabase;
+            appSupabase = createClient(supabaseUrl, supabaseKey);
+            // 存储到全局，供supabase-service.js使用
+            window.supabaseInstance = appSupabase;
+            // 同时存储到appSupabase，保持内部一致性
+            window.appSupabase = appSupabase;
             console.log('Supabase客户端初始化成功');
         } else {
             console.error('Supabase SDK已加载，但createClient函数不可用:', typeof createClient);
@@ -71,8 +75,11 @@ if (typeof window !== 'undefined' && window.supabase) {
         // 尝试另一种方式获取createClient函数
         if (typeof Supabase !== 'undefined') {
             const { createClient } = Supabase;
-            supabase = createClient(supabaseUrl, supabaseKey);
-            window.supabaseInstance = supabase;
+            appSupabase = createClient(supabaseUrl, supabaseKey);
+            // 存储到全局，供supabase-service.js使用
+            window.supabaseInstance = appSupabase;
+            // 同时存储到appSupabase，保持内部一致性
+            window.appSupabase = appSupabase;
             console.log('Supabase客户端初始化成功（使用全局Supabase对象）');
         } else {
             console.warn('Supabase SDK尚未加载，将在需要时初始化');
@@ -87,12 +94,13 @@ console.log('Supabase初始化完成，页面功能仍可使用');
 
 // 为后续动态加载提供初始化函数
 window.initSupabase = function() {
-    if (!supabase && typeof window.supabase !== 'undefined') {
+    if (!appSupabase && typeof window.supabase !== 'undefined') {
         try {
             const { createClient } = window.supabase;
             if (typeof createClient === 'function') {
-                supabase = createClient(supabaseUrl, supabaseKey);
-                window.supabaseInstance = supabase;
+                appSupabase = createClient(supabaseUrl, supabaseKey);
+                window.supabaseInstance = appSupabase;
+                window.appSupabase = appSupabase;
                 console.log('Supabase客户端延迟初始化成功');
                 
                 // 检查服务对象是否已经初始化
@@ -407,7 +415,7 @@ async function initData() {
     console.log('尝试初始化数据...');
     
     // 检查Supabase客户端是否已经正确初始化
-    if (!supabase) {
+    if (!appSupabase) {
         console.log('Supabase客户端未初始化，跳过数据加载');
         // 初始化空数组，避免系统崩溃
         announcements = [];
