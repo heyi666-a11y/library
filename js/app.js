@@ -84,6 +84,36 @@ function showPage(pageId) {
     if (targetPage) {
         targetPage.classList.add('active');
         currentPage = pageId;
+        
+        // 当页面切换到student-home时，绑定学生功能按钮的事件监听器
+        if (pageId === 'student-home') {
+            bindStudentHomeEventListeners();
+        }
+        
+        // 当页面切换到library-page时，绑定书库页面的事件监听器
+        if (pageId === 'library-page') {
+            bindLibraryPageEventListeners();
+        }
+        
+        // 当页面切换到borrow-page时，绑定借书页面的事件监听器
+        if (pageId === 'borrow-page') {
+            bindBorrowPageEventListeners();
+        }
+        
+        // 当页面切换到return-page时，绑定还书页面的事件监听器
+        if (pageId === 'return-page') {
+            bindReturnPageEventListeners();
+        }
+        
+        // 当页面切换到search-page时，绑定搜索页面的事件监听器
+        if (pageId === 'search-page') {
+            bindSearchPageEventListeners();
+        }
+        
+        // 当页面切换到admin-home时，绑定管理员页面的事件监听器
+        if (pageId === 'admin-home') {
+            bindAdminHomeEventListeners();
+        }
     }
     
     // 如果是学生主页面或欢迎页面，显示公告
@@ -100,6 +130,150 @@ function showPage(pageId) {
     } else {
         mainNav.style.position = 'sticky';
     }
+}
+
+// 绑定学生主页面的事件监听器
+function bindStudentHomeEventListeners() {
+    console.log('绑定学生主页面事件监听器...');
+    // 学生功能按钮事件监听器
+    const borrowBtn = document.getElementById('borrow-btn');
+    const returnBtn = document.getElementById('return-btn');
+    const libraryBtn = document.getElementById('library-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    
+    if (borrowBtn) {
+        borrowBtn.addEventListener('click', () => showPage('borrow-page'));
+    }
+    
+    if (returnBtn) {
+        returnBtn.addEventListener('click', () => showPage('return-page'));
+    }
+    
+    if (libraryBtn) {
+        libraryBtn.addEventListener('click', showLibraryPage);
+    }
+    
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
+    
+    console.log('学生主页面事件监听器绑定完成');
+}
+
+// 绑定书库页面的事件监听器
+function bindLibraryPageEventListeners() {
+    console.log('绑定书库页面事件监听器...');
+    const backBtn = document.getElementById('back-to-student-home');
+    const searchBtn = document.getElementById('library-search-btn');
+    const searchInput = document.getElementById('library-search-input');
+    const categoryFilter = document.getElementById('category-filter');
+    const availabilityFilter = document.getElementById('availability-filter');
+    
+    if (backBtn) {
+        backBtn.addEventListener('click', () => showPage('student-home'));
+    }
+    
+    if (searchBtn) {
+        searchBtn.addEventListener('click', performLibrarySearch);
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performLibrarySearch();
+            }
+        });
+    }
+    
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', filterBooks);
+    }
+    
+    if (availabilityFilter) {
+        availabilityFilter.addEventListener('change', filterBooks);
+    }
+    
+    console.log('书库页面事件监听器绑定完成');
+}
+
+// 绑定借书页面的事件监听器
+function bindBorrowPageEventListeners() {
+    console.log('绑定借书页面事件监听器...');
+    const backBtn = document.getElementById('back-to-home');
+    const confirmBtn = document.getElementById('confirm-borrow-btn');
+    
+    if (backBtn) {
+        backBtn.addEventListener('click', () => showPage('student-home'));
+    }
+    
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', confirmBorrow);
+    }
+    
+    console.log('借书页面事件监听器绑定完成');
+}
+
+// 绑定还书页面的事件监听器
+function bindReturnPageEventListeners() {
+    console.log('绑定还书页面事件监听器...');
+    const backBtn = document.getElementById('return-back');
+    const confirmBtn = document.getElementById('confirm-return-btn');
+    
+    if (backBtn) {
+        backBtn.addEventListener('click', () => showPage('student-home'));
+    }
+    
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', confirmReturn);
+    }
+    
+    console.log('还书页面事件监听器绑定完成');
+}
+
+// 绑定搜索页面的事件监听器
+function bindSearchPageEventListeners() {
+    console.log('绑定搜索页面事件监听器...');
+    const backBtn = document.getElementById('search-back');
+    const searchBtn = document.getElementById('search-books-action');
+    const searchInput = document.getElementById('search-books-input');
+    
+    if (backBtn) {
+        backBtn.addEventListener('click', () => showPage('student-home'));
+    }
+    
+    if (searchBtn) {
+        searchBtn.addEventListener('click', performBookSearch);
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performBookSearch();
+            }
+        });
+    }
+    
+    console.log('搜索页面事件监听器绑定完成');
+}
+
+// 绑定管理员页面的事件监听器
+function bindAdminHomeEventListeners() {
+    console.log('绑定管理员页面事件监听器...');
+    // 管理员导航事件监听器
+    document.querySelectorAll('.sidebar-nav .nav-item[data-page]').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            showAdminPage(item.dataset.page);
+        });
+    });
+    
+    // 管理员退出登录事件监听器
+    const adminLogoutBtn = document.getElementById('admin-logout');
+    if (adminLogoutBtn) {
+        adminLogoutBtn.addEventListener('click', logout);
+    }
+    
+    console.log('管理员页面事件监听器绑定完成');
 }
 
 // 显示最新公告
