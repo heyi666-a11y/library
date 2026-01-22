@@ -2,24 +2,70 @@
 import { supabaseUrl, supabaseKey } from './supabase-config.js';
 import { bookService, readerService, borrowRecordService, announcementService, authService, statsService } from './supabase-service.js';
 
-// 安全初始化Supabase客户端 - 重点修复：即使初始化失败，也不影响页面功能
+// 安全初始化Supabase客户端 - 重点修复：确保能正确获取createClient函数
 let supabase = null;
-try {
-    const { createClient } = window.supabase;
-    supabase = createClient(supabaseUrl, supabaseKey);
-    window.supabaseInstance = supabase;
-    console.log('Supabase客户端初始化成功');
-} catch (error) {
-    console.error('Supabase客户端初始化失败:', error);
-    // 忽略错误，继续执行，确保页面功能可用
-    console.log('Supabase初始化失败，但页面功能仍可使用');
+
+// 检查window.supabase对象是否已存在
+if (typeof window !== 'undefined' && window.supabase) {
+    try {
+        const { createClient } = window.supabase;
+        if (typeof createClient === 'function') {
+            supabase = createClient(supabaseUrl, supabaseKey);
+            window.supabaseInstance = supabase;
+            console.log('Supabase客户端初始化成功');
+        } else {
+            console.error('Supabase SDK已加载，但createClient函数不可用:', typeof createClient);
+        }
+    } catch (error) {
+        console.error('Supabase客户端初始化失败:', error);
+    }
+} else {
+    // 如果window.supabase不存在，尝试直接使用全局supabase对象
+    // 这是为了兼容不同的Supabase SDK加载方式
+    try {
+        // 尝试另一种方式获取createClient函数
+        if (typeof Supabase !== 'undefined') {
+            const { createClient } = Supabase;
+            supabase = createClient(supabaseUrl, supabaseKey);
+            window.supabaseInstance = supabase;
+            console.log('Supabase客户端初始化成功（使用全局Supabase对象）');
+        } else {
+            console.warn('Supabase SDK尚未加载，将在需要时初始化');
+        }
+    } catch (error) {
+        console.error('Supabase客户端初始化失败:', error);
+    }
 }
+
+// 确保页面功能可用
+console.log('Supabase初始化完成，页面功能仍可使用');
+
+// 为后续动态加载提供初始化函数
+window.initSupabase = function() {
+    if (!supabase && typeof window.supabase !== 'undefined') {
+        try {
+            const { createClient } = window.supabase;
+            if (typeof createClient === 'function') {
+                supabase = createClient(supabaseUrl, supabaseKey);
+                window.supabaseInstance = supabase;
+                console.log('Supabase客户端延迟初始化成功');
+                return true;
+            }
+        } catch (error) {
+            console.error('Supabase延迟初始化失败:', error);
+        }
+    }
+    return false;
+};
 
 // 全局变量
 let currentUser = null;
 let isAdmin = false;
 let currentPage = 'home';
 let currentAdminPage = 'dashboard';
+
+// 标志变量，用于避免事件监听器重复绑定
+let studentButtonsBound = false;
 
 // 数据存储 - 从Supabase获取
 let announcements = [];
@@ -91,6 +137,12 @@ if (typeof window.showPage === 'function') {
 
 // 绑定学生功能按钮事件监听器 - 重点修复：直接绑定，确保可靠
 function bindStudentFunctionButtons() {
+    // 检查是否已经绑定过事件监听器
+    if (studentButtonsBound) {
+        console.log('学生功能按钮事件监听器已经绑定，跳过重复绑定');
+        return;
+    }
+    
     console.log('开始绑定学生功能按钮事件监听器...');
     
     // 直接获取元素并绑定事件
@@ -126,9 +178,8 @@ function bindStudentFunctionButtons() {
     if (libraryBtn) {
         libraryBtn.onclick = function() {
             console.log('查看书库按钮被点击');
-            if (typeof window.showPage === 'function') {
-                window.showPage('library-page');
-            }
+            // 使用原始的showLibraryPage函数
+            showLibraryPage();
         };
         console.log('查看书库按钮事件监听器绑定成功');
     } else {
@@ -145,11 +196,24 @@ function bindStudentFunctionButtons() {
         console.log('退出登录按钮未找到');
     }
     
+    // 标记为已绑定
+    studentButtonsBound = true;
     console.log('学生功能按钮事件监听器绑定完成');
 }
 
 // 初始化数据
 async function initData() {
+    // 检查Supabase客户端是否已经正确初始化
+    if (!supabase) {
+        console.log('Supabase客户端未初始化，跳过数据加载');
+        // 初始化空数组，避免系统崩溃
+        announcements = [];
+        books = [];
+        readers = [];
+        borrowRecords = [];
+        return;
+    }
+    
     try {
         // 从Supabase获取数据
         console.log('开始初始化数据...');
@@ -174,6 +238,9 @@ async function initData() {
         if (error.code === 'PGRST205') {
             // 改为console.error，避免阻塞代码执行
             console.error('数据库表不存在，请先在Supabase控制台执行supabase-schema.sql脚本创建表结构。\n\n错误详情：', error);
+        } else if (error.message.includes('Cannot read property') || error.message.includes('Cannot read properties')) {
+            // 处理Supabase客户端未正确初始化的情况
+            console.error('Supabase客户端未正确初始化，无法加载数据。请检查Supabase配置。\n\n错误详情：', error);
         } else {
             // 改为console.error，避免阻塞代码执行
             console.error('数据初始化失败，请检查网络连接或Supabase配置。\n\n错误详情：', error);
@@ -181,241 +248,7 @@ async function initData() {
     }
 }
 
-// 图书馆系统页面切换函数 - 避免与main.js中的showPage冲突
-function showLibraryPage(pageId) {
-    console.log('图书馆系统切换到页面:', pageId);
-    // 使用main.js中的showPage函数进行页面切换
-    if (typeof window.showPage === 'function') {
-        window.showPage(pageId);
-    } else {
-        // 如果main.js的showPage不可用，使用备用实现
-        const pages = document.querySelectorAll('.page');
-        pages.forEach(page => {
-            page.classList.remove('active');
-        });
-        const targetPage = document.getElementById(pageId);
-        if (targetPage) {
-            targetPage.classList.add('active');
-        }
-    }
-    
-    // 更新当前页面
-    currentPage = pageId;
-    
-    // 如果是学生主页面或欢迎页面，显示公告
-    if (pageId === 'student-home' || pageId === 'welcome') {
-        showLatestAnnouncements();
-    }
-    
-    // 如果是学生主页面，立即绑定事件监听器
-    if (pageId === 'student-home') {
-        setTimeout(() => {
-            console.log('绑定学生主页面事件监听器...');
-            
-            // 学生功能按钮事件监听器
-            const borrowBtn = document.getElementById('borrow-btn');
-            const returnBtn = document.getElementById('return-btn');
-            const libraryBtn = document.getElementById('library-btn');
-            const logoutBtn = document.getElementById('logout-btn');
-            
-            if (borrowBtn) {
-                borrowBtn.onclick = () => {
-                    console.log('点击了借书按钮');
-                    showLibraryPage('borrow-page');
-                };
-            }
-            
-            if (returnBtn) {
-                returnBtn.onclick = () => {
-                    console.log('点击了还书按钮');
-                    showLibraryPage('return-page');
-                };
-            }
-            
-            if (libraryBtn) {
-                libraryBtn.onclick = () => {
-                    console.log('点击了查看书库按钮');
-                    showLibraryPage('library-page');
-                    // 初始化书库页面
-                    setTimeout(() => {
-                        initLibrary();
-                    }, 100);
-                };
-            }
-            
-            if (logoutBtn) {
-                logoutBtn.onclick = () => {
-                    console.log('点击了退出登录按钮');
-                    logout();
-                };
-            }
-            
-            console.log('学生主页面事件监听器绑定完成');
-        }, 100);
-    }
-    
-    // 如果是书库页面，立即绑定事件监听器
-    if (pageId === 'library-page') {
-        setTimeout(() => {
-            console.log('绑定书库页面事件监听器...');
-            const backBtn = document.getElementById('back-to-student-home');
-            const searchBtn = document.getElementById('library-search-btn');
-            const searchInput = document.getElementById('library-search-input');
-            const categoryFilter = document.getElementById('category-filter');
-            const availabilityFilter = document.getElementById('availability-filter');
-            
-            if (backBtn) {
-                backBtn.onclick = () => {
-                    console.log('点击了返回学生主页面按钮');
-                    showLibraryPage('student-home');
-                };
-            }
-            
-            if (searchBtn) {
-                searchBtn.onclick = () => {
-                    console.log('点击了书库搜索按钮');
-                    performLibrarySearch();
-                };
-            }
-            
-            if (searchInput) {
-                searchInput.onkeypress = function(e) {
-                    if (e.key === 'Enter') {
-                        console.log('在书库搜索框按下了Enter键');
-                        performLibrarySearch();
-                    }
-                };
-            }
-            
-            if (categoryFilter) {
-                categoryFilter.onchange = () => {
-                    console.log('切换了分类筛选');
-                    filterBooks();
-                };
-            }
-            
-            if (availabilityFilter) {
-                availabilityFilter.onchange = () => {
-                    console.log('切换了可用性筛选');
-                    filterBooks();
-                };
-            }
-            
-            console.log('书库页面事件监听器绑定完成');
-        }, 100);
-    }
-    
-    // 如果是借书页面，立即绑定事件监听器
-    if (pageId === 'borrow-page') {
-        setTimeout(() => {
-            console.log('绑定借书页面事件监听器...');
-            const backBtn = document.getElementById('back-to-home');
-            const confirmBtn = document.getElementById('confirm-borrow-btn');
-            
-            if (backBtn) {
-                backBtn.onclick = () => {
-                    console.log('点击了借书页面返回按钮');
-                    showLibraryPage('student-home');
-                };
-            }
-            
-            if (confirmBtn) {
-                confirmBtn.onclick = () => {
-                    console.log('点击了确认借书按钮');
-                    confirmBorrow();
-                };
-            }
-            
-            console.log('借书页面事件监听器绑定完成');
-        }, 100);
-    }
-    
-    // 如果是还书页面，立即绑定事件监听器
-    if (pageId === 'return-page') {
-        setTimeout(() => {
-            console.log('绑定还书页面事件监听器...');
-            const backBtn = document.getElementById('return-back');
-            const confirmBtn = document.getElementById('confirm-return-btn');
-            
-            if (backBtn) {
-                backBtn.onclick = () => {
-                    console.log('点击了还书页面返回按钮');
-                    showLibraryPage('student-home');
-                };
-            }
-            
-            if (confirmBtn) {
-                confirmBtn.onclick = () => {
-                    console.log('点击了确认还书按钮');
-                    confirmReturn();
-                };
-            }
-            
-            console.log('还书页面事件监听器绑定完成');
-        }, 100);
-    }
-    
-    // 如果是搜索页面，立即绑定事件监听器
-    if (pageId === 'search-page') {
-        setTimeout(() => {
-            console.log('绑定搜索页面事件监听器...');
-            const backBtn = document.getElementById('search-back');
-            const searchBtn = document.getElementById('search-books-action');
-            const searchInput = document.getElementById('search-books-input');
-            
-            if (backBtn) {
-                backBtn.onclick = () => {
-                    console.log('点击了搜索页面返回按钮');
-                    showLibraryPage('student-home');
-                };
-            }
-            
-            if (searchBtn) {
-                searchBtn.onclick = () => {
-                    console.log('点击了图书搜索按钮');
-                    performBookSearch();
-                };
-            }
-            
-            if (searchInput) {
-                searchInput.onkeypress = function(e) {
-                    if (e.key === 'Enter') {
-                        console.log('在图书搜索框按下了Enter键');
-                        performBookSearch();
-                    }
-                };
-            }
-            
-            console.log('搜索页面事件监听器绑定完成');
-        }, 100);
-    }
-    
-    // 如果是管理员页面，立即绑定事件监听器
-    if (pageId === 'admin-home') {
-        setTimeout(() => {
-            console.log('绑定管理员页面事件监听器...');
-            // 管理员导航事件监听器
-            document.querySelectorAll('.sidebar-nav .nav-item[data-page]').forEach(item => {
-                item.onclick = (e) => {
-                    e.preventDefault();
-                    console.log('点击了管理员导航:', item.dataset.page);
-                    showAdminPage(item.dataset.page);
-                };
-            });
-            
-            // 管理员退出登录事件监听器
-            const adminLogoutBtn = document.getElementById('admin-logout');
-            if (adminLogoutBtn) {
-                adminLogoutBtn.onclick = () => {
-                    console.log('点击了管理员退出登录按钮');
-                    logout();
-                };
-            }
-            
-            console.log('管理员页面事件监听器绑定完成');
-        }, 100);
-    }
-}
+
 
 // 确保main.js的showPage函数可用
 if (typeof showPage === 'function') {
@@ -1867,72 +1700,137 @@ async function initLibraryEventListeners() {
         const backToMainBtn = document.getElementById('back-to-main-btn');
         
         if (enterStudentLibraryBtn) {
-            enterStudentLibraryBtn.addEventListener('click', () => {
+            enterStudentLibraryBtn.onclick = function() {
                 console.log('点击了学生入口');
-                showLibraryPage('student-home');
-            });
+                if (typeof window.showPage === 'function') {
+                    window.showPage('student-home');
+                }
+                // 延迟绑定学生功能按钮事件监听器
+                setTimeout(bindStudentFunctionButtons, 100);
+            };
+            console.log('学生入口事件监听器绑定成功');
+        } else {
+            console.log('学生入口按钮未找到');
         }
         
         if (enterAdminLibraryBtn) {
-            enterAdminLibraryBtn.addEventListener('click', () => {
+            enterAdminLibraryBtn.onclick = function() {
                 console.log('点击了管理员入口');
-                showLibraryPage('admin-login-page');
-            });
+                if (typeof window.showPage === 'function') {
+                    window.showPage('admin-login-page');
+                }
+            };
+            console.log('管理员入口事件监听器绑定成功');
+        } else {
+            console.log('管理员入口按钮未找到');
         }
         
         if (backToMainBtn) {
-            backToMainBtn.addEventListener('click', () => {
+            backToMainBtn.onclick = function() {
                 console.log('点击了返回主系统');
-                showLibraryPage('home');
-                // 更新导航状态
-                document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
-                    nav.classList.remove('active');
-                });
-                document.querySelector('.nav-menu .nav-item[data-page="home"]')?.classList.add('active');
-            });
+                if (typeof window.showPage === 'function') {
+                    window.showPage('home');
+                    // 更新导航状态
+                    document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
+                        nav.classList.remove('active');
+                    });
+                    document.querySelector('.nav-menu .nav-item[data-page="home"]')?.classList.add('active');
+                }
+            };
+            console.log('返回主系统事件监听器绑定成功');
+        } else {
+            console.log('返回主系统按钮未找到');
         }
         
         // 管理员登录页面返回首页
         const backToHomeBtn = document.getElementById('back-to-home-btn');
         if (backToHomeBtn) {
-            backToHomeBtn.addEventListener('click', () => {
+            backToHomeBtn.onclick = function() {
                 console.log('点击了返回首页');
-                showLibraryPage('home');
-                // 更新导航状态
-                document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
-                    nav.classList.remove('active');
-                });
-                document.querySelector('.nav-menu .nav-item[data-page="home"]')?.classList.add('active');
-            });
+                if (typeof window.showPage === 'function') {
+                    window.showPage('home');
+                    // 更新导航状态
+                    document.querySelectorAll('.nav-menu .nav-item').forEach(nav => {
+                        nav.classList.remove('active');
+                    });
+                    document.querySelector('.nav-menu .nav-item[data-page="home"]')?.classList.add('active');
+                }
+            };
+            console.log('返回首页事件监听器绑定成功');
         }
         
         // 管理员登录提交
         const adminLoginSubmitBtn = document.getElementById('admin-login-submit');
         if (adminLoginSubmitBtn) {
-            adminLoginSubmitBtn.addEventListener('click', adminLogin);
+            adminLoginSubmitBtn.onclick = adminLogin;
+            console.log('管理员登录提交事件监听器绑定成功');
         }
         
         // 登录功能
         const loginBtn = document.getElementById('login-btn');
         if (loginBtn) {
-            loginBtn.addEventListener('click', studentLogin);
+            loginBtn.onclick = studentLogin;
+            console.log('登录按钮事件监听器绑定成功');
         }
         
         // ISBN搜索功能
         const searchIsbnBtn = document.getElementById('search-isbn-btn');
         if (searchIsbnBtn) {
-            searchIsbnBtn.addEventListener('click', searchISBN);
+            searchIsbnBtn.onclick = searchISBN;
+            console.log('ISBN搜索事件监听器绑定成功');
         }
         
         // 公告管理功能
         const publishAnnouncementBtn = document.getElementById('publish-announcement-btn');
         const closeAnnouncementBtn = document.getElementById('close-announcement');
         if (publishAnnouncementBtn) {
-            publishAnnouncementBtn.addEventListener('click', publishAnnouncement);
+            publishAnnouncementBtn.onclick = publishAnnouncement;
+            console.log('发布公告事件监听器绑定成功');
         }
         if (closeAnnouncementBtn) {
-            closeAnnouncementBtn.addEventListener('click', closeAnnouncement);
+            closeAnnouncementBtn.onclick = closeAnnouncement;
+            console.log('关闭公告事件监听器绑定成功');
         }
+        
+        // 管理员侧边栏导航事件 - 重点修复：确保能切换到所有管理员页面
+        const adminNavItems = document.querySelectorAll('.sidebar-nav .nav-item');
+        if (adminNavItems.length > 0) {
+            adminNavItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pageId = item.getAttribute('data-page');
+                    console.log(`切换到管理员页面: ${pageId}`);
+                    
+                    // 使用showAdminPage函数切换页面
+                    showAdminPage(pageId);
+                    
+                    // 更新导航状态
+                    adminNavItems.forEach(nav => {
+                        nav.classList.remove('active');
+                    });
+                    item.classList.add('active');
+                });
+            });
+            console.log('管理员侧边栏导航事件监听器绑定成功');
+        } else {
+            console.log('管理员侧边栏导航项未找到，可能尚未加载到DOM中');
+        }
+        
+        // 管理员页面返回按钮
+        const adminLogoutBtn = document.getElementById('admin-logout');
+        if (adminLogoutBtn) {
+            adminLogoutBtn.onclick = function(e) {
+                e.preventDefault();
+                console.log('管理员退出登录');
+                logout();
+            };
+            console.log('管理员退出登录事件监听器绑定成功');
+        } else {
+            console.log('管理员退出登录按钮未找到');
+        }
+        
+        // 确保管理员页面功能正常
+        console.log('管理员页面功能初始化完成');
         
         console.log('图书馆系统事件监听器绑定完成');
         
