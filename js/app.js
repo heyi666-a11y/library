@@ -32,8 +32,11 @@ initLibrarySystem();
 
 // 初始化图书馆系统
 function initLibrarySystem() {
+    console.log('图书馆系统初始化中...');
+    // 初始化事件监听器
+    initEventListeners();
+    console.log('图书馆系统事件监听器初始化完成');
     console.log('图书馆系统初始化完成');
-    // 可以在这里添加图书馆系统的初始化代码
 }
 
 // 初始化数据
