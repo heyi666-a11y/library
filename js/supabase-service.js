@@ -2,13 +2,10 @@
 // 封装所有与Supabase的交互逻辑
 // 该文件作为普通脚本加载，将服务对象暴露到全局作用域
 
-// 直接使用全局window.supabaseInstance对象，不进行独立声明
-// 确保只使用全局变量，避免与app.js中的声明冲突
-const supabase = typeof window !== 'undefined' && window.supabaseInstance ? window.supabaseInstance : null;
-
+// 直接使用 window.supabaseInstance，避免重复声明
 // 检查supabase是否可用的辅助函数
 function isSupabaseAvailable() {
-    return typeof supabase !== 'undefined' && supabase !== null;
+    return typeof window !== 'undefined' && window.supabaseInstance !== null;
 }
 
 // 数据服务层 - 图书管理
@@ -21,7 +18,7 @@ const bookService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('books')
                 .select('*')
                 .order('id', { ascending: true });
@@ -41,7 +38,7 @@ const bookService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('books')
                 .select('*')
                 .eq('id', id)
@@ -62,7 +59,7 @@ const bookService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('books')
                 .insert([book])
                 .select()
@@ -83,7 +80,7 @@ const bookService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('books')
                 .update(book)
                 .eq('id', id)
@@ -105,7 +102,7 @@ const bookService = {
         }
         
         try {
-            const { error } = await supabase
+            const { error } = await window.supabaseInstance
                 .from('books')
                 .delete()
                 .eq('id', id);
@@ -125,7 +122,7 @@ const bookService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('books')
                 .select('*')
                 .or(`title.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%,isbn.ilike.%${searchTerm}%,publisher.ilike.%${searchTerm}%`);
@@ -145,7 +142,7 @@ const bookService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('books')
                 .select('*')
                 .eq('category', category);
@@ -168,7 +165,7 @@ const readerService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('readers')
                 .select('*')
                 .order('id', { ascending: true });
@@ -188,7 +185,7 @@ const readerService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('readers')
                 .select('*')
                 .eq('id', id)
@@ -209,7 +206,7 @@ const readerService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('readers')
                 .insert([reader])
                 .select()
@@ -230,7 +227,7 @@ const readerService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('readers')
                 .update(reader)
                 .eq('id', id)
@@ -255,7 +252,7 @@ const borrowRecordService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('borrow_records')
                 .select('*')
                 .order('id', { ascending: false });
@@ -275,7 +272,7 @@ const borrowRecordService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('borrow_records')
                 .select('*')
                 .eq('student_id', studentId)
@@ -296,7 +293,7 @@ const borrowRecordService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('borrow_records')
                 .insert([record])
                 .select()
@@ -317,7 +314,7 @@ const borrowRecordService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('borrow_records')
                 .update(updates)
                 .eq('id', id)
@@ -340,7 +337,7 @@ const borrowRecordService = {
         
         try {
             const today = new Date().toISOString().split('T')[0];
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('borrow_records')
                 .select('*')
                 .lt('due_date', today)
@@ -365,7 +362,7 @@ const announcementService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('announcements')
                 .select('*')
                 .order('date', { ascending: false });
@@ -385,7 +382,7 @@ const announcementService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('announcements')
                 .select('*')
                 .order('date', { ascending: false })
@@ -406,7 +403,7 @@ const announcementService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .from('announcements')
                 .insert([announcement])
                 .select()
@@ -459,7 +456,7 @@ const authService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .auth
                 .signInWithPassword({
                     email,
@@ -481,7 +478,7 @@ const authService = {
         }
         
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseInstance
                 .auth
                 .signUp({
                     email,
@@ -503,7 +500,7 @@ const authService = {
         }
         
         try {
-            const { error } = await supabase.auth.signOut();
+            const { error } = await window.supabaseInstance.auth.signOut();
             if (error) throw error;
             return true;
         } catch (error) {
@@ -520,7 +517,7 @@ const authService = {
         }
         
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await window.supabaseInstance.auth.getUser();
             return user;
         } catch (error) {
             console.error('获取当前用户失败:', error);
@@ -543,16 +540,16 @@ const statsService = {
         }
         
         try {
-            const totalBooks = await supabase
+            const totalBooks = await window.supabaseInstance
                 .from('books')
                 .select('*', { count: 'exact' });
             
-            const borrowedBooks = await supabase
+            const borrowedBooks = await window.supabaseInstance
                 .from('borrow_records')
                 .select('*', { count: 'exact' })
                 .is('return_date', null);
             
-            const todayBorrows = await supabase
+            const todayBorrows = await window.supabaseInstance
                 .from('borrow_records')
                 .select('*', { count: 'exact' })
                 .gte('borrow_date', new Date().toISOString().split('T')[0]);
@@ -581,7 +578,7 @@ const statsService = {
         
         try {
             const today = new Date().toISOString().split('T')[0];
-            const { count } = await supabase
+            const { count } = await window.supabaseInstance
                 .from('borrow_records')
                 .select('*', { count: 'exact' })
                 .lt('due_date', today)

@@ -168,9 +168,7 @@ let readers = [];
 let borrowRecords = [];
 
 // DOM元素
-const pages = document.querySelectorAll('.page');
 const adminPages = document.querySelectorAll('.admin-page');
-
 // 图书馆系统初始化
 console.log('图书馆系统初始化中...');
 
