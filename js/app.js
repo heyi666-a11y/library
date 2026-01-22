@@ -13,39 +13,17 @@ if (typeof window.appJsLoaded !== 'undefined') {
     console.log('app.js开始执行，设置加载标志');
 }
 
+// 从全局作用域获取服务对象
+let bookService = window.bookService;
+let readerService = window.readerService;
+let borrowRecordService = window.borrowRecordService;
+let announcementService = window.announcementService;
+let authService = window.authService;
+let statsService = window.statsService;
+
 // 定义Supabase配置
 const supabaseUrl = 'https://yzhnrtinfztdumfzuxvk.supabase.co';
 const supabaseKey = 'sb_publishable_yebBr2U45Y5yWMUzNcaBkw_NRaAwZEM';
-
-// 定义服务对象，将在后续加载supabase-service.js后可用
-let bookService, readerService, borrowRecordService, announcementService, authService, statsService;
-
-// 加载supabase-service.js
-(function() {
-    const serviceScript = document.createElement('script');
-    serviceScript.src = 'js/supabase-service.js';
-    serviceScript.onload = function() {
-        console.log('supabase-service.js加载完成');
-        // 服务对象将通过全局作用域提供
-        bookService = window.bookService;
-        readerService = window.readerService;
-        borrowRecordService = window.borrowRecordService;
-        announcementService = window.announcementService;
-        authService = window.authService;
-        statsService = window.statsService;
-        console.log('服务对象初始化完成');
-        
-        // 服务对象加载完成后，检查Supabase客户端是否已初始化
-        // 如果已初始化，立即加载数据
-        if (appSupabase) {
-            console.log('Supabase客户端已初始化，开始加载数据...');
-            initData();
-        } else {
-            console.log('Supabase客户端尚未初始化，等待初始化完成后再加载数据');
-        }
-    };
-    document.head.appendChild(serviceScript);
-})();
 
 // 安全初始化Supabase客户端 - 重点修复：确保能正确获取createClient函数
 // 使用appSupabase替代supabase，避免与supabase-service.js中的声明冲突
