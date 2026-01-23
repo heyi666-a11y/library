@@ -9,7 +9,7 @@ function isSupabaseAvailable() {
 }
 
 // 数据服务层 - 图书管理
-const bookService = {
+window.bookService = {
     // 获取所有图书
     async getAllBooks() {
         if (!isSupabaseAvailable()) {
@@ -156,7 +156,7 @@ const bookService = {
 };
 
 // 数据服务层 - 读者管理
-const readerService = {
+window.readerService = {
     // 获取所有读者
     async getAllReaders() {
         if (!isSupabaseAvailable()) {
@@ -243,7 +243,7 @@ const readerService = {
 };
 
 // 数据服务层 - 借阅记录管理
-const borrowRecordService = {
+window.borrowRecordService = {
     // 获取所有借阅记录
     async getAllBorrowRecords() {
         if (!isSupabaseAvailable()) {
@@ -353,7 +353,7 @@ const borrowRecordService = {
 };
 
 // 数据服务层 - 公告管理
-const announcementService = {
+window.announcementService = {
     // 获取所有公告
     async getAllAnnouncements() {
         if (!isSupabaseAvailable()) {
@@ -418,7 +418,7 @@ const announcementService = {
 };
 
 // 认证服务
-const authService = {
+window.authService = {
     // 学生登录（使用学号）
     async studentLogin(studentId) {
         // 在实际应用中，应该使用Supabase的认证系统
@@ -527,7 +527,7 @@ const authService = {
 };
 
 // 统计服务
-const statsService = {
+window.statsService = {
     // 获取图书统计
     async getBookStats() {
         if (!isSupabaseAvailable()) {
@@ -590,14 +590,3 @@ const statsService = {
         }
     }
 };
-
-// 将服务对象暴露到全局作用域，供app.js使用
-if (typeof window !== 'undefined') {
-    window.bookService = bookService;
-    window.readerService = readerService;
-    window.borrowRecordService = borrowRecordService;
-    window.announcementService = announcementService;
-    window.authService = authService;
-    window.statsService = statsService;
-    console.log('Supabase服务对象已暴露到全局作用域');
-}

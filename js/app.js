@@ -13,122 +13,19 @@ if (typeof window.appJsLoaded !== 'undefined') {
     console.log('app.js开始执行，设置加载标志');
 }
 
-// 从全局作用域获取服务对象
-let bookService = window.bookService;
-let readerService = window.readerService;
-let borrowRecordService = window.borrowRecordService;
-let announcementService = window.announcementService;
-let authService = window.authService;
-let statsService = window.statsService;
+// 获取全局服务对象
+const bookService = window.bookService;
+const readerService = window.readerService;
+const borrowRecordService = window.borrowRecordService;
+const announcementService = window.announcementService;
+const authService = window.authService;
+const statsService = window.statsService;
 
-// 定义Supabase配置
-const supabaseUrl = 'https://yzhnrtinfztdumfzuxvk.supabase.co';
-const supabaseKey = 'sb_publishable_yebBr2U45Y5yWMUzNcaBkw_NRaAwZEM';
-
-// 安全初始化Supabase客户端 - 重点修复：确保能正确获取createClient函数
-// 使用appSupabase替代supabase，避免与supabase-service.js中的声明冲突
-let appSupabase = null;
-
-// 检查window.supabase对象是否已存在
-if (typeof window !== 'undefined' && window.supabase) {
-    try {
-        const { createClient } = window.supabase;
-        if (typeof createClient === 'function') {
-            appSupabase = createClient(supabaseUrl, supabaseKey);
-            // 存储到全局，供supabase-service.js使用
-            window.supabaseInstance = appSupabase;
-            // 同时存储到appSupabase，保持内部一致性
-            window.appSupabase = appSupabase;
-            console.log('Supabase客户端初始化成功');
-        } else {
-            console.error('Supabase SDK已加载，但createClient函数不可用:', typeof createClient);
-        }
-    } catch (error) {
-        console.error('Supabase客户端初始化失败:', error);
-    }
-} else {
-    // 如果window.supabase不存在，尝试直接使用全局supabase对象
-    // 这是为了兼容不同的Supabase SDK加载方式
-    try {
-        // 尝试另一种方式获取createClient函数
-        if (typeof Supabase !== 'undefined') {
-            const { createClient } = Supabase;
-            appSupabase = createClient(supabaseUrl, supabaseKey);
-            // 存储到全局，供supabase-service.js使用
-            window.supabaseInstance = appSupabase;
-            // 同时存储到appSupabase，保持内部一致性
-            window.appSupabase = appSupabase;
-            console.log('Supabase客户端初始化成功（使用全局Supabase对象）');
-        } else {
-            console.warn('Supabase SDK尚未加载，将在需要时初始化');
-        }
-    } catch (error) {
-        console.error('Supabase客户端初始化失败:', error);
-    }
-}
+// Supabase客户端已在supabase-config.js中初始化，直接使用全局对象
+const appSupabase = window.supabaseInstance;
 
 // 确保页面功能可用
 console.log('Supabase初始化完成，页面功能仍可使用');
-
-// 为后续动态加载提供初始化函数
-window.initSupabase = function() {
-    if (!appSupabase && typeof window.supabase !== 'undefined') {
-        try {
-            const { createClient } = window.supabase;
-            if (typeof createClient === 'function') {
-                appSupabase = createClient(supabaseUrl, supabaseKey);
-                window.supabaseInstance = appSupabase;
-                window.appSupabase = appSupabase;
-                console.log('Supabase客户端延迟初始化成功');
-                
-                // 检查服务对象是否已经初始化
-                console.log('检查服务对象初始化状态...');
-                console.log('bookService:', typeof bookService);
-                console.log('readerService:', typeof readerService);
-                console.log('borrowRecordService:', typeof borrowRecordService);
-                console.log('announcementService:', typeof announcementService);
-                console.log('authService:', typeof authService);
-                console.log('statsService:', typeof statsService);
-                
-                if (bookService && readerService && borrowRecordService && announcementService && authService && statsService) {
-                    console.log('服务对象已就绪，开始加载数据...');
-                    initData();
-                } else {
-                    console.log('服务对象尚未就绪，等待服务对象加载完成后再加载数据');
-                    // 尝试从全局作用域重新获取服务对象
-                    if (typeof window.bookService !== 'undefined') {
-                        bookService = window.bookService;
-                    }
-                    if (typeof window.readerService !== 'undefined') {
-                        readerService = window.readerService;
-                    }
-                    if (typeof window.borrowRecordService !== 'undefined') {
-                        borrowRecordService = window.borrowRecordService;
-                    }
-                    if (typeof window.announcementService !== 'undefined') {
-                        announcementService = window.announcementService;
-                    }
-                    if (typeof window.authService !== 'undefined') {
-                        authService = window.authService;
-                    }
-                    if (typeof window.statsService !== 'undefined') {
-                        statsService = window.statsService;
-                    }
-                    // 再次检查服务对象是否就绪
-                    if (bookService && readerService && borrowRecordService && announcementService && authService && statsService) {
-                        console.log('服务对象已就绪，开始加载数据...');
-                        initData();
-                    }
-                }
-                
-                return true;
-            }
-        } catch (error) {
-            console.error('Supabase延迟初始化失败:', error);
-        }
-    }
-    return false;
-};
 
 // 全局变量
 let currentUser = null;
