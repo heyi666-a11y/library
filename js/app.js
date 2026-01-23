@@ -756,6 +756,7 @@ function displayBooks(booksToDisplay) {
         <div class="library-book-item">
             <h4>${book.title}</h4>
             <div class="book-info">
+                <p><strong>编号：</strong>${book.number}</p>
                 <p><strong>作者：</strong>${book.author}</p>
                 <p><strong>出版社：</strong>${book.publisher}</p>
                 <p><strong>ISBN：</strong>${book.isbn}</p>
@@ -1076,6 +1077,7 @@ function initBookList() {
         <div class="book-management-item">
             <div class="book-info">
                 <h4>${book.title}</h4>
+                <p>编号：${book.number}</p>
                 <p>作者：${book.author}</p>
                 <p>ISBN：${book.isbn}</p>
                 <p>分类：${book.category}</p>
@@ -1111,6 +1113,7 @@ function addBook() {
 }
 
 async function confirmAddBook() {
+    const number = parseInt(document.getElementById('add-book-number').value);
     const title = document.getElementById('add-book-title').value;
     const author = document.getElementById('add-book-author').value;
     const isbn = document.getElementById('add-book-isbn').value;
@@ -1119,10 +1122,11 @@ async function confirmAddBook() {
     const copies = parseInt(document.getElementById('add-book-copies').value);
     
     // 移除ISBN的必填验证
-    if (title && author && category && publisher && !isNaN(copies) && copies > 0) {
+    if (number && title && author && category && publisher && !isNaN(copies) && copies > 0 && !isNaN(number)) {
         try {
             // 使用Supabase服务添加图书
             const newBook = {
+                number: number,
                 title: title,
                 author: author,
                 isbn: isbn || '', // 允许空ISBN
@@ -1171,6 +1175,7 @@ function editBook(id) {
     
     // 填充表单数据
     document.getElementById('edit-book-id').value = book.id;
+    document.getElementById('edit-book-number').value = book.number || '';
     document.getElementById('edit-book-title').value = book.title;
     document.getElementById('edit-book-author').value = book.author;
     document.getElementById('edit-book-isbn').value = book.isbn;
@@ -1187,6 +1192,7 @@ async function confirmEditBook() {
     const book = books.find(b => b.id === id);
     if (!book) return;
     
+    const number = parseInt(document.getElementById('edit-book-number').value);
     const title = document.getElementById('edit-book-title').value;
     const author = document.getElementById('edit-book-author').value;
     const isbn = document.getElementById('edit-book-isbn').value;
@@ -1194,11 +1200,12 @@ async function confirmEditBook() {
     const publisher = document.getElementById('edit-book-publisher').value;
     const copies = parseInt(document.getElementById('edit-book-copies').value);
     
-    if (title && author && isbn && category && publisher && !isNaN(copies)) {
+    if (number && title && author && isbn && category && publisher && !isNaN(copies) && !isNaN(number)) {
         try {
             // 更新本地图书对象
             const updatedBook = {
                 ...book,
+                number: number,
                 title: title,
                 author: author,
                 isbn: isbn,
@@ -2113,87 +2120,87 @@ async function initLibraryEventListeners() {
         console.error('图书馆系统事件监听器初始化失败:', error);
         // 即使事件监听器初始化失败，也不抛出错误，确保页面可以访问
     }
-    
-    // 数据初始化 - 独立执行，不影响事件监听器
-    try {
-        console.log('初始化数据...');
-        await initData();
-        console.log('数据初始化完成');
-    } catch (error) {
-        console.error('初始化数据失败:', error);
-        // 初始化空数组，避免系统崩溃
-        announcements = [];
-        books = [];
-        readers = [];
-        borrowRecords = [];
-    }
 }
 
 // 发布公告
 async function publishAnnouncement() {
-    // 获取公告表单元素
-    const titleElement = document.getElementById('announcement-title');
-    const contentElement = document.getElementById('announcement-content');
-    
-    // 检查元素是否存在
-    if (!titleElement || !contentElement) {
-        console.error('公告表单元素未找到');
-        alert('公告表单元素未找到，请检查页面结构');
-        return;
-    }
-    
-    // 获取表单值，并添加空值检查
-    const title = (titleElement.value || '').trim();
-    const content = (contentElement.value || '').trim();
-    
-    console.log('公告标题:', title, '长度:', title.length, '类型:', typeof title);
-    console.log('公告内容:', content, '长度:', content.length, '类型:', typeof content);
-    
-    // 更严格的表单验证
-    if (title.length > 0 && content.length > 0) {
-        try {
-            // 检查announcementService是否存在
-            if (!announcementService) {
-                console.error('announcementService未初始化');
-                alert('公告服务未初始化，请刷新页面重试');
-                return;
-            }
-            
-            // 检查addAnnouncement方法是否存在
-            if (typeof announcementService.addAnnouncement !== 'function') {
-                console.error('addAnnouncement方法未定义');
-                alert('公告服务方法未定义，请刷新页面重试');
-                return;
-            }
-            
-            const newAnnouncement = {
-                title: title,
-                content: content,
-                date: new Date().toISOString().split('T')[0]
-            };
-            
-            console.log('准备发布公告:', newAnnouncement);
-            
-            // 使用Supabase服务添加公告
-            const addedAnnouncement = await announcementService.addAnnouncement(newAnnouncement);
-            
-            console.log('公告发布成功，返回数据:', addedAnnouncement);
-            
-            // 更新本地数据
-            announcements.push(addedAnnouncement);
-            
-            // 清空表单
-            titleElement.value = '';
-            contentElement.value = '';
-            
-            alert('公告发布成功！');
-        } catch (error) {
-            console.error('发布公告失败:', error);
-            alert('发布公告失败，请稍后重试\n\n错误详情: ' + (error.message || '未知错误'));
+    console.log('开始执行发布公告函数');
+    try {
+        // 获取公告表单元素
+        const titleElement = document.getElementById('announcement-title');
+        const contentElement = document.getElementById('announcement-content');
+        
+        console.log('获取到的表单元素:', 'titleElement:', titleElement, 'contentElement:', contentElement);
+        
+        // 检查元素是否存在
+        if (!titleElement || !contentElement) {
+            console.error('公告表单元素未找到');
+            alert('公告表单元素未找到，请检查页面结构');
+            return;
         }
-    } else {
-        console.error('表单验证失败:', 'title:', title, 'content:', content);
-        alert('请填写公告标题和内容！');
+        
+        // 获取表单值，并添加空值检查
+        const title = (titleElement.value || '').trim();
+        const content = (contentElement.value || '').trim();
+        
+        console.log('公告标题:', title, '长度:', title.length, '类型:', typeof title);
+        console.log('公告内容:', content, '长度:', content.length, '类型:', typeof content);
+        
+        // 更严格的表单验证
+        if (title.length > 0 && content.length > 0) {
+            try {
+                // 检查announcementService是否存在
+                if (!announcementService) {
+                    console.error('announcementService未初始化');
+                    alert('公告服务未初始化，请刷新页面重试');
+                    return;
+                }
+                
+                // 检查addAnnouncement方法是否存在
+                if (typeof announcementService.addAnnouncement !== 'function') {
+                    console.error('addAnnouncement方法未定义');
+                    alert('公告服务方法未定义，请刷新页面重试');
+                    return;
+                }
+                
+                const newAnnouncement = {
+                    title: title,
+                    content: content,
+                    date: new Date().toISOString().split('T')[0]
+                };
+                
+                console.log('准备发布公告:', newAnnouncement);
+                
+                // 使用Supabase服务添加公告
+                const addedAnnouncement = await announcementService.addAnnouncement(newAnnouncement);
+                
+                console.log('公告发布成功，返回数据:', addedAnnouncement);
+                
+                // 更新本地数据
+                if (Array.isArray(announcements)) {
+                    announcements.push(addedAnnouncement);
+                }
+                
+                // 清空表单
+                if (titleElement && titleElement.value !== undefined) {
+                    titleElement.value = '';
+                }
+                if (contentElement && contentElement.value !== undefined) {
+                    contentElement.value = '';
+                }
+                
+                alert('公告发布成功！');
+            } catch (error) {
+                console.error('发布公告失败:', error);
+                alert('发布公告失败，请稍后重试\n\n错误详情: ' + (error.message || '未知错误'));
+            }
+        } else {
+            console.error('表单验证失败:', 'title:', title, 'content:', content);
+            alert('请填写公告标题和内容！');
+        }
+    } catch (error) {
+        console.error('publishAnnouncement函数执行失败:', error);
+        alert('发布公告失败，请稍后重试\n\n错误详情: ' + (error.message || '未知错误'));
     }
 }
 
