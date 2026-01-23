@@ -61,8 +61,7 @@ window.bookService = {
         try {
             // 复制book对象，避免修改原始对象
             const bookToInsert = { ...book };
-            // 移除可能不存在的字段，避免Supabase返回400错误
-            delete bookToInsert.number;
+            // 保留number字段，后端已添加该字段
             
             const { data, error } = await window.supabaseInstance
                 .from('books')
@@ -87,8 +86,7 @@ window.bookService = {
         try {
             // 复制book对象，避免修改原始对象
             const bookToUpdate = { ...book };
-            // 移除可能不存在的字段，避免Supabase返回400错误
-            delete bookToUpdate.number;
+            // 保留number字段，后端已添加该字段
             
             const { data, error } = await window.supabaseInstance
                 .from('books')
