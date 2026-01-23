@@ -414,6 +414,107 @@ function showAdminPage(pageId) {
         item.classList.remove('active');
     });
     document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
+    
+    // 如果切换到图书管理页面，绑定添加图书、批量导入、导出报表按钮事件监听器，以及编辑图书模态框事件监听器
+    if (pageId === 'books') {
+        console.log('切换到图书管理页面，绑定添加图书、批量导入和导出报表按钮事件监听器');
+        setTimeout(() => {
+            // 绑定添加图书按钮事件
+            const addBookBtn = document.querySelector('#books .btn-primary');
+            if (addBookBtn) {
+                addBookBtn.onclick = function() {
+                    console.log('添加图书按钮被点击');
+                    addBook();
+                };
+                console.log('添加图书按钮事件监听器绑定成功');
+            }
+            
+            // 绑定批量导入按钮事件
+            const batchImportBtn = document.querySelector('#books .btn-secondary');
+            if (batchImportBtn) {
+                batchImportBtn.onclick = function() {
+                    console.log('批量导入按钮被点击');
+                    // 这里可以添加批量导入功能的实现
+                    alert('批量导入功能即将实现');
+                };
+                console.log('批量导入按钮事件监听器绑定成功');
+            }
+            
+            // 绑定导出报表按钮事件
+            const exportBooksBtn = document.querySelector('#books .page-actions .btn-secondary');
+            if (exportBooksBtn) {
+                exportBooksBtn.onclick = function() {
+                    console.log('导出图书报表按钮被点击');
+                    exportBooks();
+                };
+                console.log('导出图书报表按钮事件监听器绑定成功');
+            }
+            
+            // 绑定编辑图书模态框事件监听器
+            console.log('绑定编辑图书模态框事件监听器');
+            
+            // 取消编辑按钮
+            const cancelEditBtn = document.getElementById('cancel-edit-book');
+            if (cancelEditBtn) {
+                // 先移除可能存在的事件监听器，避免重复绑定
+                cancelEditBtn.onclick = null;
+                cancelEditBtn.onclick = function() {
+                    console.log('取消编辑按钮被点击');
+                    document.getElementById('edit-book-modal').style.display = 'none';
+                };
+                console.log('取消编辑按钮事件监听器绑定成功');
+            }
+            
+            // 确认编辑按钮
+            const confirmEditBtn = document.getElementById('confirm-edit-book');
+            if (confirmEditBtn) {
+                // 先移除可能存在的事件监听器，避免重复绑定
+                confirmEditBtn.onclick = null;
+                confirmEditBtn.onclick = function() {
+                    console.log('确认编辑按钮被点击');
+                    confirmEditBook();
+                };
+                console.log('确认编辑按钮事件监听器绑定成功');
+            }
+        }, 100);
+    }
+    
+    // 如果切换到读者管理页面，绑定导出报表按钮事件监听器
+    if (pageId === 'readers') {
+        console.log('切换到读者管理页面，绑定导出报表按钮事件监听器');
+        setTimeout(() => {
+            // 绑定导出报表按钮事件
+            const exportReadersBtn = document.querySelector('#readers .btn-secondary');
+            if (exportReadersBtn) {
+                exportReadersBtn.onclick = function() {
+                    console.log('导出读者报表按钮被点击');
+                    exportReaders();
+                };
+                console.log('导出读者报表按钮事件监听器绑定成功');
+            } else {
+                // 如果没有导出报表按钮，添加一个
+                const readersPageHeader = document.querySelector('#readers .page-header');
+                if (readersPageHeader) {
+                    const pageActions = readersPageHeader.querySelector('.page-actions');
+                    if (!pageActions) {
+                        // 创建page-actions容器
+                        const newPageActions = document.createElement('div');
+                        newPageActions.className = 'page-actions';
+                        readersPageHeader.appendChild(newPageActions);
+                        const newExportBtn = document.createElement('button');
+                        newExportBtn.className = 'btn btn-secondary';
+                        newExportBtn.innerHTML = '<i class="fas fa-download"></i> 导出报表';
+                        newExportBtn.onclick = function() {
+                            console.log('导出读者报表按钮被点击');
+                            exportReaders();
+                        };
+                        newPageActions.appendChild(newExportBtn);
+                        console.log('读者管理导出报表按钮创建并绑定成功');
+                    }
+                }
+            }
+        }, 100);
+    }
 }
 
 // 学生登录
@@ -1961,17 +2062,18 @@ async function initLibraryEventListeners() {
 
 // 发布公告
 async function publishAnnouncement() {
-    // 确保元素存在
-    const titleElement = document.getElementById('publish-announcement-title');
-    const contentElement = document.getElementById('publish-announcement-content');
+    // 获取公告表单元素
+    const titleElement = document.getElementById('announcement-title');
+    const contentElement = document.getElementById('announcement-content');
     
+    // 检查元素是否存在
     if (!titleElement || !contentElement) {
         console.error('公告表单元素未找到');
         alert('公告表单元素未找到，请检查页面结构');
         return;
     }
     
-    // 直接获取值，不使用可选链，确保能正确获取
+    // 获取表单值
     const title = titleElement.value.trim();
     const content = contentElement.value.trim();
     
