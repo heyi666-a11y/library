@@ -2142,9 +2142,9 @@ async function publishAnnouncement() {
         return;
     }
     
-    // 获取表单值
-    const title = titleElement.value.trim();
-    const content = contentElement.value.trim();
+    // 获取表单值，并添加空值检查
+    const title = (titleElement.value || '').trim();
+    const content = (contentElement.value || '').trim();
     
     console.log('公告标题:', title, '长度:', title.length, '类型:', typeof title);
     console.log('公告内容:', content, '长度:', content.length, '类型:', typeof content);
@@ -2152,6 +2152,20 @@ async function publishAnnouncement() {
     // 更严格的表单验证
     if (title.length > 0 && content.length > 0) {
         try {
+            // 检查announcementService是否存在
+            if (!announcementService) {
+                console.error('announcementService未初始化');
+                alert('公告服务未初始化，请刷新页面重试');
+                return;
+            }
+            
+            // 检查addAnnouncement方法是否存在
+            if (typeof announcementService.addAnnouncement !== 'function') {
+                console.error('addAnnouncement方法未定义');
+                alert('公告服务方法未定义，请刷新页面重试');
+                return;
+            }
+            
             const newAnnouncement = {
                 title: title,
                 content: content,
@@ -2175,7 +2189,7 @@ async function publishAnnouncement() {
             alert('公告发布成功！');
         } catch (error) {
             console.error('发布公告失败:', error);
-            alert('发布公告失败，请稍后重试\n\n错误详情: ' + error.message);
+            alert('发布公告失败，请稍后重试\n\n错误详情: ' + (error.message || '未知错误'));
         }
     } else {
         console.error('表单验证失败:', 'title:', title, 'content:', content);
