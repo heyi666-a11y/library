@@ -166,14 +166,18 @@ if (typeof initLibraryEventListeners !== 'function') {
 // initLibraryEventListeners函数已在条件语句中直接赋值给window对象，无需再次赋值
 
 // 当app.js加载完成后，初始化图书馆系统功能
-window.initLibrarySystem = function() {
+window.initLibrarySystem = async function() {
     console.log('图书馆系统初始化中...');
     // 初始化事件监听器
     try {
         initLibraryEventListeners();
         console.log('图书馆系统事件监听器初始化完成');
+        
+        // 初始化数据
+        await initData();
+        console.log('图书馆系统数据初始化完成');
     } catch (error) {
-        console.error('初始化事件监听器失败:', error);
+        console.error('初始化失败:', error);
     }
     console.log('图书馆系统初始化完成');
 };
@@ -756,7 +760,7 @@ function displayBooks(booksToDisplay) {
         <div class="library-book-item">
             <h4>${book.title}</h4>
             <div class="book-info">
-                <p><strong>编号：</strong>${book.number}</p>
+                ${book.number ? `<p><strong>编号：</strong>${book.number}</p>` : ''}
                 <p><strong>作者：</strong>${book.author}</p>
                 <p><strong>出版社：</strong>${book.publisher}</p>
                 <p><strong>ISBN：</strong>${book.isbn}</p>
@@ -1077,7 +1081,7 @@ function initBookList() {
         <div class="book-management-item">
             <div class="book-info">
                 <h4>${book.title}</h4>
-                <p>编号：${book.number}</p>
+                ${book.number ? `<p>编号：${book.number}</p>` : ''}
                 <p>作者：${book.author}</p>
                 <p>ISBN：${book.isbn}</p>
                 <p>分类：${book.category}</p>
@@ -1113,7 +1117,7 @@ function addBook() {
 }
 
 async function confirmAddBook() {
-    const number = parseInt(document.getElementById('add-book-number').value);
+    const number = document.getElementById('add-book-number').value;
     const title = document.getElementById('add-book-title').value;
     const author = document.getElementById('add-book-author').value;
     const isbn = document.getElementById('add-book-isbn').value;
@@ -1121,12 +1125,11 @@ async function confirmAddBook() {
     const publisher = document.getElementById('add-book-publisher').value;
     const copies = parseInt(document.getElementById('add-book-copies').value);
     
-    // 移除ISBN的必填验证
-    if (number && title && author && category && publisher && !isNaN(copies) && copies > 0 && !isNaN(number)) {
+    // 移除ISBN和number的必填验证
+    if (title && author && category && publisher && !isNaN(copies) && copies > 0) {
         try {
             // 使用Supabase服务添加图书
             const newBook = {
-                number: number,
                 title: title,
                 author: author,
                 isbn: isbn || '', // 允许空ISBN
@@ -1192,7 +1195,7 @@ async function confirmEditBook() {
     const book = books.find(b => b.id === id);
     if (!book) return;
     
-    const number = parseInt(document.getElementById('edit-book-number').value);
+    const number = document.getElementById('edit-book-number').value;
     const title = document.getElementById('edit-book-title').value;
     const author = document.getElementById('edit-book-author').value;
     const isbn = document.getElementById('edit-book-isbn').value;
@@ -1200,12 +1203,11 @@ async function confirmEditBook() {
     const publisher = document.getElementById('edit-book-publisher').value;
     const copies = parseInt(document.getElementById('edit-book-copies').value);
     
-    if (number && title && author && isbn && category && publisher && !isNaN(copies) && !isNaN(number)) {
+    if (title && author && isbn && category && publisher && !isNaN(copies)) {
         try {
             // 更新本地图书对象
             const updatedBook = {
                 ...book,
-                number: number,
                 title: title,
                 author: author,
                 isbn: isbn,
