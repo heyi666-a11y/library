@@ -441,8 +441,32 @@ function showAdminPage(pageId) {
             }
             
             // 绑定导出报表按钮事件
-            const exportBooksBtn = document.querySelector('#books .page-actions .btn-secondary');
-            if (exportBooksBtn) {
+            let exportBooksBtn = document.querySelector('#books .page-actions .btn-secondary');
+            // 检查是否已经有导出报表按钮，如果没有则添加
+            if (!exportBooksBtn || !exportBooksBtn.innerHTML.includes('导出报表')) {
+                const booksPageHeader = document.querySelector('#books .page-header');
+                if (booksPageHeader) {
+                    const pageActions = booksPageHeader.querySelector('.page-actions');
+                    if (pageActions) {
+                        // 检查是否已经有导出报表按钮
+                        const existingExportBtn = pageActions.querySelector('.btn-secondary:nth-last-child(1)');
+                        if (!existingExportBtn || !existingExportBtn.innerHTML.includes('导出报表')) {
+                            const newExportBtn = document.createElement('button');
+                            newExportBtn.className = 'btn btn-secondary';
+                            newExportBtn.innerHTML = '<i class="fas fa-download"></i> 导出报表';
+                            newExportBtn.onclick = function() {
+                                console.log('导出图书报表按钮被点击');
+                                exportBooks();
+                            };
+                            pageActions.appendChild(newExportBtn);
+                            exportBooksBtn = newExportBtn;
+                            console.log('图书管理导出报表按钮创建并绑定成功');
+                        }
+                    }
+                }
+            } else {
+                // 如果已经有导出报表按钮，重新绑定事件
+                exportBooksBtn.onclick = null;
                 exportBooksBtn.onclick = function() {
                     console.log('导出图书报表按钮被点击');
                     exportBooks();
@@ -450,13 +474,59 @@ function showAdminPage(pageId) {
                 console.log('导出图书报表按钮事件监听器绑定成功');
             }
             
+            // 绑定添加图书模态框事件监听器
+            console.log('绑定添加图书模态框事件监听器');
+            
+            // 关闭添加图书模态框按钮
+            const closeAddModalBtn = document.getElementById('close-add-modal');
+            if (closeAddModalBtn) {
+                closeAddModalBtn.onclick = null;
+                closeAddModalBtn.onclick = function() {
+                    console.log('关闭添加图书模态框按钮被点击');
+                    document.getElementById('add-book-modal').style.display = 'none';
+                };
+                console.log('关闭添加图书模态框按钮事件监听器绑定成功');
+            }
+            
+            // 取消添加图书按钮
+            const cancelAddBtn = document.getElementById('cancel-add-book');
+            if (cancelAddBtn) {
+                cancelAddBtn.onclick = null;
+                cancelAddBtn.onclick = function() {
+                    console.log('取消添加图书按钮被点击');
+                    document.getElementById('add-book-modal').style.display = 'none';
+                };
+                console.log('取消添加图书按钮事件监听器绑定成功');
+            }
+            
+            // 确认添加图书按钮
+            const confirmAddBtn = document.getElementById('confirm-add-book');
+            if (confirmAddBtn) {
+                confirmAddBtn.onclick = null;
+                confirmAddBtn.onclick = function() {
+                    console.log('确认添加图书按钮被点击');
+                    confirmAddBook();
+                };
+                console.log('确认添加图书按钮事件监听器绑定成功');
+            }
+            
             // 绑定编辑图书模态框事件监听器
             console.log('绑定编辑图书模态框事件监听器');
+            
+            // 关闭编辑图书模态框按钮
+            const closeEditModalBtn = document.getElementById('close-edit-modal');
+            if (closeEditModalBtn) {
+                closeEditModalBtn.onclick = null;
+                closeEditModalBtn.onclick = function() {
+                    console.log('关闭编辑图书模态框按钮被点击');
+                    document.getElementById('edit-book-modal').style.display = 'none';
+                };
+                console.log('关闭编辑图书模态框按钮事件监听器绑定成功');
+            }
             
             // 取消编辑按钮
             const cancelEditBtn = document.getElementById('cancel-edit-book');
             if (cancelEditBtn) {
-                // 先移除可能存在的事件监听器，避免重复绑定
                 cancelEditBtn.onclick = null;
                 cancelEditBtn.onclick = function() {
                     console.log('取消编辑按钮被点击');
@@ -468,7 +538,6 @@ function showAdminPage(pageId) {
             // 确认编辑按钮
             const confirmEditBtn = document.getElementById('confirm-edit-book');
             if (confirmEditBtn) {
-                // 先移除可能存在的事件监听器，避免重复绑定
                 confirmEditBtn.onclick = null;
                 confirmEditBtn.onclick = function() {
                     console.log('确认编辑按钮被点击');
