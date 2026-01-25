@@ -249,6 +249,16 @@ async function handleBatchImport() {
         progressFill.style.width = '100%';
         progressText.textContent = '100% 导入完成';
         
+        // 重新从数据库加载图书数据，更新本地books数组
+        console.log('刷新本地图书数据...');
+        try {
+            // 调用getAllBooks重新获取所有图书数据
+            books = await bookService.getAllBooks();
+            console.log('本地图书数据刷新成功，共', books.length, '本图书');
+        } catch (error) {
+            console.error('刷新本地图书数据失败:', error);
+        }
+        
         alert(`批量导入成功！共导入 ${result.success} 本图书，失败 ${result.failed} 本`);
         
         // 关闭模态框
