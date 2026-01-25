@@ -447,8 +447,8 @@ if (typeof window.showPage === 'function') {
             }, 100);
         }
         
-        // 如果切换到学生相关页面，显示最新公告
-        if (pageId === 'student-home' || pageId === 'borrow-page' || pageId === 'return-page' || pageId === 'library-page') {
+        // 只在进入学生主页面时显示最新公告
+        if (pageId === 'student-home') {
             console.log(`切换到${pageId}页面，显示最新公告`);
             setTimeout(() => {
                 try {
