@@ -389,18 +389,21 @@ async function addBooksBatch(books, progressCallback) {
         const book = books[i];
         
         try {
-            // 检查数据库中是否已存在相同ISBN的图书
-            const existingBook = await bookService.getBookByISBN(book.isbn);
-            if (existingBook) {
-                // 更新现有图书的数量
-                await bookService.updateBook(existingBook.id, {
-                    quantity: existingBook.quantity + book.quantity,
-                    available: existingBook.available + book.quantity
-                });
-            } else {
-                // 添加新图书
-                await bookService.addBook(book);
-            }
+            // 根据用户要求，批量导入不需要查ISBN，直接添加图书
+            // 调整数据结构，确保使用数据库中实际存在的列名
+            const bookToAdd = {
+                number: book.number,
+                title: book.title,
+                author: book.author,
+                isbn: book.isbn,
+                category: book.category,
+                publisher: book.publisher,
+                status: 'available',
+                available: book.quantity || 1
+            };
+            
+            // 添加新图书
+            await bookService.addBook(bookToAdd);
             
             success++;
         } catch (error) {
@@ -2152,7 +2155,7 @@ function generateAnalysisReport() {
 
 // 数据统计更新
 function updateStats() {
-    const booksInLibrary = books.reduce((sum, book) => sum + book.copies, 0);
+    const booksInLibrary = books.reduce((sum, book) => sum + (book.available || book.copies || 1), 0);
     const today = new Date().toISOString().split('T')[0];
     const todayBorrows = borrowRecords.filter(r => r.borrow_date === today).length;
     const activeBorrows = borrowRecords.filter(r => r.return_date === null).length;
@@ -2167,6 +2170,9 @@ function updateStats() {
     
     // 更新分析报告
     generateAnalysisReport();
+    
+    // 生成热门图书排行榜
+    generatePopularBooksRanking();
 }
 
 // 文字统计生成函数
@@ -2274,7 +2280,7 @@ function generateBookCategoryText() {
     // 统计图书分类
     const categoryStats = {};
     books.forEach(book => {
-        categoryStats[book.category] = (categoryStats[book.category] || 0) + book.copies;
+        categoryStats[book.category] = (categoryStats[book.category] || 0) + (book.available || book.copies || 1);
     });
     
     // 生成文字统计
@@ -2283,7 +2289,7 @@ function generateBookCategoryText() {
     if (Object.keys(categoryStats).length > 0) {
         text += `<ul>`;
         Object.entries(categoryStats).forEach(([category, count]) => {
-            const totalBooks = books.reduce((sum, book) => sum + book.copies, 0);
+            const totalBooks = books.reduce((sum, book) => sum + (book.available || book.copies || 1), 0);
             const percentage = totalBooks > 0 ? ((count / totalBooks) * 100).toFixed(1) : 0;
             text += `<li>${category}：${count}本 (${percentage}%)</li>`;
         });
@@ -2293,6 +2299,66 @@ function generateBookCategoryText() {
     }
     
     container.innerHTML = text;
+}
+
+// 生成热门图书排行榜
+function generatePopularBooksRanking() {
+    const container = document.getElementById('popular-books-list');
+    if (!container) return;
+    
+    // 统计图书借阅次数
+    const bookPopularity = {};
+    borrowRecords.forEach(record => {
+        bookPopularity[record.book_id] = (bookPopularity[record.book_id] || 0) + 1;
+    });
+    
+    // 生成热门书籍列表
+    const popularBooks = Object.entries(bookPopularity)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 10)
+        .map(([bookId, count]) => {
+            const book = books.find(b => b.id === parseInt(bookId));
+            return {
+                title: book ? book.title : '未知图书',
+                author: book ? book.author : '未知作者',
+                count: count
+            };
+        });
+    
+    // 生成HTML
+    let html = '';
+    
+    if (popularBooks.length > 0) {
+        html += `<div class="popular-books-ranking">`;
+        popularBooks.forEach((book, index) => {
+            // 添加不同的UI装饰，比如排名图标、借阅次数的火焰图标等
+            const rankIcon = index === 0 ? '<i class="fas fa-crown gold"></i>' : 
+                           index === 1 ? '<i class="fas fa-crown silver"></i>' : 
+                           index === 2 ? '<i class="fas fa-crown bronze"></i>' : 
+                           `<span class="rank-number">${index + 1}</span>`;
+            
+            html += `
+                <div class="popular-book-item">
+                    <div class="book-rank">${rankIcon}</div>
+                    <div class="book-info">
+                        <div class="book-title">${book.title}</div>
+                        <div class="book-author">${book.author}</div>
+                    </div>
+                    <div class="book-stats">
+                        <div class="borrow-count"><i class="fas fa-fire"></i> ${book.count}次</div>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+    } else {
+        html += `<div class="no-data">
+                    <i class="fas fa-book-open"></i>
+                    <p>暂无借阅记录</p>
+                </div>`;
+    }
+    
+    container.innerHTML = html;
 }
 
 // 事件监听器 - 重命名为initLibraryEventListeners，避免与main.js冲突
