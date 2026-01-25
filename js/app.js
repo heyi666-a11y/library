@@ -189,6 +189,234 @@ if (document.readyState === 'loading') {
     window.initLibrarySystem();
 }
 
+// 批量导入功能
+async function handleBatchImport() {
+    console.log('开始处理批量导入...');
+    const fileInput = document.getElementById('batch-import-file');
+    const useAiCheckbox = document.getElementById('use-ai-checkbox');
+    const progressDiv = document.getElementById('batch-import-progress');
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('请选择一个CSV文件');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const useAI = useAiCheckbox.checked;
+    
+    // 显示进度条
+    progressDiv.style.display = 'block';
+    progressFill.style.width = '0%';
+    progressText.textContent = '0% 准备中...';
+    
+    try {
+        // 读取文件
+        const fileContent = await readFile(file);
+        console.log('文件读取完成，开始解析CSV...');
+        
+        // 解析CSV
+        const books = parseCSV(fileContent);
+        console.log(`解析完成，共 ${books.length} 本书`);
+        
+        let processedBooks = books;
+        
+        // 如果启用AI处理
+        if (useAI) {
+            console.log('开始AI处理...');
+            processedBooks = await processBooksWithAI(books, (progress) => {
+                const percent = Math.round((progress / books.length) * 30) + 30; // AI处理占30%进度
+                progressFill.style.width = `${percent}%`;
+                progressText.textContent = `${percent}% AI处理中...`;
+            });
+            console.log('AI处理完成');
+        } else {
+            // 直接跳过AI处理，进度到60%
+            progressFill.style.width = '60%';
+            progressText.textContent = '60% 准备导入...';
+        }
+        
+        // 批量添加图书
+        console.log('开始批量添加图书...');
+        const result = await addBooksBatch(processedBooks, (progress) => {
+            const percent = Math.round((progress / processedBooks.length) * 40) + 60; // 添加图书占40%进度
+            progressFill.style.width = `${percent}%`;
+            progressText.textContent = `${percent}% 导入中...`;
+        });
+        
+        // 完成
+        progressFill.style.width = '100%';
+        progressText.textContent = '100% 导入完成';
+        
+        alert(`批量导入成功！共导入 ${result.success} 本图书，失败 ${result.failed} 本`);
+        
+        // 关闭模态框
+        document.getElementById('batch-import-modal').style.display = 'none';
+        
+        // 刷新图书列表
+        if (typeof initBookList === 'function') {
+            initBookList();
+        }
+        
+        // 重置文件输入
+        fileInput.value = '';
+        useAiCheckbox.checked = false;
+        
+    } catch (error) {
+        console.error('批量导入失败:', error);
+        alert(`批量导入失败: ${error.message}`);
+        
+        // 隐藏进度条
+        progressDiv.style.display = 'none';
+    }
+}
+
+// 读取文件
+function readFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            resolve(e.target.result);
+        };
+        reader.onerror = (e) => {
+            reject(new Error('文件读取失败'));
+        };
+        reader.readAsText(file, 'UTF-8');
+    });
+}
+
+// 解析CSV
+function parseCSV(csvText) {
+    const lines = csvText.split('\n');
+    const books = [];
+    
+    // 跳过表头
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const fields = line.split(',');
+        if (fields.length < 7) {
+            console.warn(`跳过无效行: ${line}`);
+            continue;
+        }
+        
+        const book = {
+            number: fields[0].trim(),
+            title: fields[1].trim(),
+            author: fields[2].trim(),
+            isbn: fields[3].trim(),
+            category: fields[4].trim(),
+            publisher: fields[5].trim(),
+            quantity: parseInt(fields[6].trim()) || 1
+        };
+        
+        books.push(book);
+    }
+    
+    return books;
+}
+
+// 使用智谱AI处理图书
+async function processBooksWithAI(books, progressCallback) {
+    const processedBooks = [];
+    const apiKey = '6cc5158bafbc44458e007a27825464be.NgsJybRTDD7KPMIA';
+    
+    for (let i = 0; i < books.length; i++) {
+        const book = books[i];
+        
+        // 调用智谱AI API
+        try {
+            const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'glm-4',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: '你是一个图书信息处理助手，请根据提供的图书信息，补充完整图书的详细信息，包括书名、作者、ISBN、分类、出版社、简介等。如果信息已经完整，请直接返回原始信息。'
+                        },
+                        {
+                            role: 'user',
+                            content: JSON.stringify(book)
+                        }
+                    ]
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                const aiContent = data.choices[0].message.content;
+                try {
+                    const aiBook = JSON.parse(aiContent);
+                    processedBooks.push({ ...book, ...aiBook });
+                } catch (parseError) {
+                    console.warn(`AI返回的格式无效，使用原始数据: ${aiContent}`);
+                    processedBooks.push(book);
+                }
+            } else {
+                processedBooks.push(book);
+            }
+        } catch (error) {
+            console.error(`AI处理失败，使用原始数据: ${error.message}`);
+            processedBooks.push(book);
+        }
+        
+        // 调用进度回调
+        if (progressCallback) {
+            progressCallback(i + 1);
+        }
+        
+        // 避免请求过于频繁
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    return processedBooks;
+}
+
+// 批量添加图书
+async function addBooksBatch(books, progressCallback) {
+    let success = 0;
+    let failed = 0;
+    
+    for (let i = 0; i < books.length; i++) {
+        const book = books[i];
+        
+        try {
+            // 检查数据库中是否已存在相同ISBN的图书
+            const existingBook = await bookService.getBookByISBN(book.isbn);
+            if (existingBook) {
+                // 更新现有图书的数量
+                await bookService.updateBook(existingBook.id, {
+                    quantity: existingBook.quantity + book.quantity,
+                    available: existingBook.available + book.quantity
+                });
+            } else {
+                // 添加新图书
+                await bookService.addBook(book);
+            }
+            
+            success++;
+        } catch (error) {
+            console.error(`添加图书失败: ${book.title}`, error);
+            failed++;
+        }
+        
+        // 调用进度回调
+        if (progressCallback) {
+            progressCallback(i + 1);
+        }
+    }
+    
+    return { success, failed };
+}
+
 // 重点修复：直接绑定到main.js的showPage函数，确保页面切换时能正确处理
 if (typeof window.showPage === 'function') {
     // 保存原始showPage函数
@@ -217,6 +445,18 @@ if (typeof window.showPage === 'function') {
             setTimeout(() => {
                 bindStudentFunctionButtons();
             }, 100);
+        }
+        
+        // 如果切换到学生相关页面，显示最新公告
+        if (pageId === 'student-home' || pageId === 'borrow-page' || pageId === 'return-page' || pageId === 'library-page') {
+            console.log(`切换到${pageId}页面，显示最新公告`);
+            setTimeout(() => {
+                try {
+                    showLatestAnnouncements();
+                } catch (error) {
+                    console.error('显示公告失败:', error);
+                }
+            }, 200);
         }
     };
 }
@@ -332,6 +572,9 @@ async function initData() {
         borrowRecords = await borrowRecordService.getAllBorrowRecords();
         console.log('借阅记录数据加载成功');
         console.log('数据初始化成功');
+        
+        // 数据初始化完成后，显示最新公告
+        showLatestAnnouncements();
     } catch (error) {
         console.error('初始化数据失败:', error);
         // 初始化空数组，避免系统崩溃
@@ -406,18 +649,47 @@ function closeAnnouncement() {
 }
 
 function showAdminPage(pageId) {
-    adminPages.forEach(page => {
-        page.classList.remove('active');
-    });
-    document.getElementById(pageId).classList.add('active');
-    currentAdminPage = pageId;
+    console.log('showAdminPage called with pageId:', pageId);
+    if (!pageId) {
+        console.warn('Invalid pageId, skipping showAdminPage');
+        return;
+    }
     
-    // 更新导航状态
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-        item.classList.remove('active');
-    });
-    document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
+    // 确保adminPages和page都不为空
+    if (adminPages && adminPages.length > 0) {
+        adminPages.forEach(page => {
+            if (page && page.classList) {
+                page.classList.remove('active');
+            }
+        });
+    }
+    
+    const targetPage = document.getElementById(pageId);
+    if (targetPage) {
+        if (targetPage.classList) {
+            targetPage.classList.add('active');
+        }
+        currentAdminPage = pageId;
+        
+        // 更新导航状态
+        const navItems = document.querySelectorAll('.nav-item');
+        if (navItems) {
+            navItems.forEach(item => {
+                if (item && item.classList) {
+                    item.classList.remove('active');
+                }
+            });
+        }
+        
+        const targetNavItem = document.querySelector(`[data-page="${pageId}"]`);
+        if (targetNavItem && targetNavItem.classList) {
+            targetNavItem.classList.add('active');
+        } else {
+            console.warn(`Nav item with data-page="${pageId}" not found`);
+        }
+    } else {
+        console.warn(`Page with id="${pageId}" not found`);
+    }
     
     // 如果切换到图书管理页面，绑定添加图书、批量导入、导出报表按钮事件监听器，以及编辑图书模态框事件监听器
     if (pageId === 'books') {
@@ -438,10 +710,41 @@ function showAdminPage(pageId) {
             if (batchImportBtn) {
                 batchImportBtn.onclick = function() {
                     console.log('批量导入按钮被点击');
-                    // 这里可以添加批量导入功能的实现
-                    alert('批量导入功能即将实现');
+                    // 打开批量导入模态框
+                    document.getElementById('batch-import-modal').style.display = 'block';
                 };
                 console.log('批量导入按钮事件监听器绑定成功');
+            }
+            
+            // 绑定批量导入模态框事件监听器
+            // 关闭批量导入模态框按钮
+            const closeBatchImportBtn = document.getElementById('close-batch-import-modal');
+            if (closeBatchImportBtn) {
+                closeBatchImportBtn.onclick = function() {
+                    console.log('关闭批量导入模态框按钮被点击');
+                    document.getElementById('batch-import-modal').style.display = 'none';
+                };
+                console.log('关闭批量导入模态框按钮事件监听器绑定成功');
+            }
+            
+            // 取消批量导入按钮
+            const cancelBatchImportBtn = document.getElementById('cancel-batch-import');
+            if (cancelBatchImportBtn) {
+                cancelBatchImportBtn.onclick = function() {
+                    console.log('取消批量导入按钮被点击');
+                    document.getElementById('batch-import-modal').style.display = 'none';
+                };
+                console.log('取消批量导入按钮事件监听器绑定成功');
+            }
+            
+            // 确认批量导入按钮
+            const confirmBatchImportBtn = document.getElementById('confirm-batch-import');
+            if (confirmBatchImportBtn) {
+                confirmBatchImportBtn.onclick = function() {
+                    console.log('确认批量导入按钮被点击');
+                    handleBatchImport();
+                };
+                console.log('确认批量导入按钮事件监听器绑定成功');
             }
             
             // 绑定导出报表按钮事件
