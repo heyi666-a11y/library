@@ -389,9 +389,8 @@ async function addBooksBatch(books, progressCallback) {
         const book = books[i];
         
         try {
-            // 根据用户要求，批量导入不需要查ISBN，直接添加图书
             // 调整数据结构，确保使用数据库中实际存在的列名
-            const bookToAdd = {
+            const bookData = {
                 number: book.number,
                 title: book.title,
                 author: book.author,
@@ -402,8 +401,22 @@ async function addBooksBatch(books, progressCallback) {
                 available: book.quantity || 1
             };
             
-            // 添加新图书
-            await bookService.addBook(bookToAdd);
+            // 检查ISBN是否已经存在
+            const existingBook = await bookService.getBookByISBN(book.isbn);
+            
+            if (existingBook) {
+                // ISBN已存在，更新现有图书的数量
+                console.log(`图书${book.title}的ISBN已存在，更新数量`);
+                await bookService.updateBook(existingBook.id, {
+                    available: existingBook.available + (book.quantity || 1),
+                    // 如果数据库中有quantity列，也需要更新
+                    // quantity: existingBook.quantity + (book.quantity || 1)
+                });
+            } else {
+                // ISBN不存在，添加新图书
+                console.log(`添加新图书：${book.title}`);
+                await bookService.addBook(bookData);
+            }
             
             success++;
         } catch (error) {

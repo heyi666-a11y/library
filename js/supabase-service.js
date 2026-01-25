@@ -64,7 +64,19 @@ window.bookService = {
                 .select('*')
                 .eq('isbn', isbn)
                 .single();
-            if (error) throw error;
+            
+            // 如果没有找到数据，返回null而不是抛出错误
+            if (error) {
+                // 检查是否是因为没有找到数据导致的错误
+                if (error.code === 'PGRST116' && error.details === 'The result contains 0 rows') {
+                    // ISBN不存在，返回null
+                    return null;
+                }
+                // 其他错误，记录日志并返回null
+                console.error(`获取图书ISBN=${isbn}失败:`, error);
+                return null;
+            }
+            
             return data;
         } catch (error) {
             console.error(`获取图书ISBN=${isbn}失败:`, error);
