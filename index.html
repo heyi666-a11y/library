@@ -566,6 +566,153 @@
         </div>
     </div>
 
+    <style>
+        /* 热门图书排行榜样式 */
+        .popular-books-container {
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .popular-books-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .popular-books-header h3 {
+            margin: 0;
+            color: #343a40;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .popular-books-header h3 i {
+            color: #dc3545;
+        }
+
+        .popular-books-header .subtitle {
+            margin: 0;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .popular-books-ranking {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .popular-book-item {
+            display: flex;
+            align-items: center;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .popular-book-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .book-rank {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-right: 15px;
+        }
+
+        .book-rank .fas.fa-crown {
+            font-size: 1.5rem;
+        }
+
+        .book-rank .fas.fa-crown.gold {
+            color: #ffd700;
+        }
+
+        .book-rank .fas.fa-crown.silver {
+            color: #c0c0c0;
+        }
+
+        .book-rank .fas.fa-crown.bronze {
+            color: #cd7f32;
+        }
+
+        .book-rank .rank-number {
+            background-color: #e9ecef;
+            color: #495057;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .book-info {
+            flex: 1;
+            margin-right: 15px;
+        }
+
+        .book-title {
+            font-weight: bold;
+            color: #343a40;
+            margin-bottom: 5px;
+        }
+
+        .book-author {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .book-stats {
+            display: flex;
+            align-items: center;
+        }
+
+        .borrow-count {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background-color: #f0f8ff;
+            color: #007bff;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .borrow-count i {
+            color: #dc3545;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .no-data i {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            color: #dee2e6;
+        }
+    </style>
+
     <!-- 管理员主页面 -->
     <div id="admin-home" class="page">
         <div class="admin-container">
@@ -652,18 +799,13 @@
                             </div>
                         </div>
                     </div>
-                    <div class="charts-container">
-                        <div class="chart-card">
-                            <h3>近30天借阅趋势</h3>
-                            <canvas id="borrow-trend-chart"></canvas>
+                    <div class="popular-books-container">
+                        <div class="popular-books-header">
+                            <h3><i class="fas fa-fire"></i> 热门图书排行榜</h3>
+                            <p class="subtitle">按借阅次数排序</p>
                         </div>
-                        <div class="chart-card">
-                            <h3>热门书籍TOP10</h3>
-                            <canvas id="popular-books-chart"></canvas>
-                        </div>
-                        <div class="chart-card">
-                            <h3>图书分类分布</h3>
-                            <canvas id="book-category-chart"></canvas>
+                        <div class="popular-books-list" id="popular-books-list">
+                            <!-- 热门图书排行榜将通过JavaScript动态生成 -->
                         </div>
                     </div>
                 </div>
