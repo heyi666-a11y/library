@@ -50,6 +50,27 @@ window.bookService = {
             return null;
         }
     },
+    
+    // 根据ISBN获取图书
+    async getBookByISBN(isbn) {
+        if (!isSupabaseAvailable()) {
+            console.warn('Supabase客户端未初始化，无法获取图书');
+            return null;
+        }
+        
+        try {
+            const { data, error } = await window.supabaseInstance
+                .from('books')
+                .select('*')
+                .eq('isbn', isbn)
+                .single();
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error(`获取图书ISBN=${isbn}失败:`, error);
+            return null;
+        }
+    },
 
     // 添加图书
     async addBook(book) {

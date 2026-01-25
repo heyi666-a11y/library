@@ -445,10 +445,8 @@ if (typeof window.showPage === 'function') {
             setTimeout(() => {
                 bindStudentFunctionButtons();
             }, 100);
-        }
-        
-        // 只在进入学生主页面时显示最新公告
-        if (pageId === 'student-home') {
+            
+            // 只在进入学生主页面时显示最新公告
             console.log(`切换到${pageId}页面，显示最新公告`);
             setTimeout(() => {
                 try {
@@ -457,6 +455,25 @@ if (typeof window.showPage === 'function') {
                     console.error('显示公告失败:', error);
                 }
             }, 200);
+        }
+        
+        // 如果切换到借书页面，绑定确认借书按钮事件监听器
+        if (pageId === 'borrow-page') {
+            console.log('切换到借书页面，绑定确认借书按钮事件监听器');
+            setTimeout(() => {
+                try {
+                    const confirmBorrowBtn = document.getElementById('confirm-borrow-btn');
+                    if (confirmBorrowBtn) {
+                        confirmBorrowBtn.onclick = function() {
+                            console.log('确认借书按钮被点击');
+                            confirmBorrow();
+                        };
+                        console.log('确认借书按钮事件监听器绑定成功');
+                    }
+                } catch (error) {
+                    console.error('绑定确认借书按钮事件监听器失败:', error);
+                }
+            }, 100);
         }
     };
 }
