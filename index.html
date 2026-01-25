@@ -529,6 +529,38 @@
             </div>
         </div>
     </div>
+    
+    <!-- 批量导入图书模态框 -->
+    <div id="batch-import-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>批量导入图书</h3>
+                <span class="close" id="close-batch-import-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="batch-import-file">选择CSV文件</label>
+                    <input type="file" id="batch-import-file" accept=".csv" required>
+                    <p class="help-text">请上传包含图书信息的CSV文件，格式为：编号,书名,作者,ISBN,分类,出版社,数量</p>
+                </div>
+                <div class="form-group">
+                    <label for="use-ai-checkbox">使用AI识别（可选）</label>
+                    <input type="checkbox" id="use-ai-checkbox">
+                    <p class="help-text">启用后将使用智谱AI识别图书信息</p>
+                </div>
+                <div id="batch-import-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">0% 完成</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-batch-import">取消</button>
+                <button class="btn btn-primary" id="confirm-batch-import">开始导入</button>
+            </div>
+        </div>
+    </div>
 
     <!-- 管理员主页面 -->
     <div id="admin-home" class="page">
