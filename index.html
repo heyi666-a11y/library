@@ -399,13 +399,27 @@
                 <button class="btn-back" id="return-back"><i class="fas fa-arrow-left"></i> 返回</button>
             </div>
             <div class="return-form">
-                <div class="form-group">
-                    <label for="return-book-title">书名</label>
-                    <input type="text" id="return-book-title" placeholder="请输入书名">
+                <div class="student-info">
+                    <h3>读者信息</h3>
+                    <div class="form-group">
+                        <label for="return-student-id"><i class="fas fa-id-card"></i> 学号/校卡</label>
+                        <input type="text" id="return-student-id" placeholder="请输入学号或刷校卡">
+                    </div>
+                    <div class="form-group">
+                        <label for="return-student-name"><i class="fas fa-user"></i> 姓名</label>
+                        <input type="text" id="return-student-name" placeholder="请输入姓名">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="return-book-isbn">ISBN (可选)</label>
-                    <input type="text" id="return-book-isbn" placeholder="请输入ISBN">
+                <div class="book-info">
+                    <h3>图书信息</h3>
+                    <div class="form-group">
+                        <label for="return-book-title">书名</label>
+                        <input type="text" id="return-book-title" placeholder="请输入书名">
+                    </div>
+                    <div class="form-group">
+                        <label for="return-book-isbn">ISBN (可选)</label>
+                        <input type="text" id="return-book-isbn" placeholder="请输入ISBN">
+                    </div>
                 </div>
                 <button class="btn btn-primary btn-large" id="confirm-return-btn">确认还书</button>
             </div>
@@ -886,9 +900,9 @@
                                 <input type="number" value="30">
                             </div>
                             <div class="setting-item">
-                                <label>最大借阅数量</label>
-                                <input type="number" value="5">
-                            </div>
+                            <label>最大借阅数量</label>
+                            <input type="number" id="max-borrow-quantity" value="5">
+                        </div>
                             <div class="setting-item">
                                 <label>逾期罚款（元/天）</label>
                                 <input type="number" step="0.1" value="0.1">
