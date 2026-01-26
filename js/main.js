@@ -15,6 +15,18 @@ function showPage(pageId) {
     const targetPage = document.getElementById(pageId);
     if (targetPage) {
         targetPage.classList.add('active');
+        
+        // 页面切换事件
+        console.log(`页面切换到: ${pageId}`);
+        
+        // 如果切换到还书页面，重新初始化事件监听器
+        if (pageId === 'return-page') {
+            console.log('切换到还书页面，检查并重新绑定事件监听器');
+            // 检查是否有图书馆事件监听器初始化函数
+            if (typeof window.initLibraryEventListeners === 'function') {
+                window.initLibraryEventListeners();
+            }
+        }
     }
 }
 

@@ -150,13 +150,24 @@ if (typeof initLibraryEventListeners !== 'function') {
             };
         }
         
-        // 确认还书按钮事件
+        // 确认还书按钮事件 - 使用异步调用
         const confirmReturnBtn = document.getElementById('confirm-return-btn');
         if (confirmReturnBtn) {
-            confirmReturnBtn.onclick = function() {
-                console.log('确认还书按钮被点击');
-                confirmReturn();
+            // 移除可能存在的旧事件监听器
+            confirmReturnBtn.onclick = null;
+            confirmReturnBtn.onclick = async function() {
+                console.log('=== 确认还书按钮被点击 ===');
+                try {
+                    await confirmReturn();
+                    console.log('=== 还书流程正常结束 ===');
+                } catch (error) {
+                    console.error('=== 还书流程异常结束 ===', error);
+                    alert('还书失败，请稍后重试');
+                }
             };
+            console.log('确认还书按钮事件监听器绑定成功');
+        } else {
+            console.log('确认还书按钮未找到');
         }
         
         console.log('图书馆事件监听器初始化完成');
@@ -1381,31 +1392,35 @@ async function confirmBorrow() {
 
 // 改进的还书功能
 async function confirmReturn() {
+    console.log('=== 开始还书流程 ===');
     const studentId = document.getElementById('return-student-id').value;
     const studentName = document.getElementById('return-student-name').value;
     const bookTitle = document.getElementById('return-book-title').value;
     const bookIsbn = document.getElementById('return-book-isbn').value;
     
-    console.log('确认还书参数:', { studentId, studentName, bookTitle, bookIsbn });
+    console.log('1. 收集还书参数:', { studentId, studentName, bookTitle, bookIsbn });
     
     if (!studentId) {
+        console.log('2. 学号为空，终止还书流程');
         alert('请输入学号');
         return;
     }
     
     if (!studentName) {
+        console.log('2. 姓名为空，终止还书流程');
         alert('请输入姓名');
         return;
     }
     
     if (!bookTitle && !bookIsbn) {
+        console.log('2. 书名和ISBN都为空，终止还书流程');
         alert('请输入书名或ISBN');
         return;
     }
     
     try {
-        // 查找借阅记录
-        console.log('当前借阅记录:', borrowRecords);
+        console.log('3. 开始查找借阅记录');
+        console.log('3.1 当前借阅记录数量:', borrowRecords.length);
         
         // 先查找匹配的图书
         let matchingBooks = [];
@@ -1413,36 +1428,46 @@ async function confirmReturn() {
         // 综合书名和ISBN进行匹配
         if (bookTitle && bookIsbn) {
             // 同时提供书名和ISBN，需要同时匹配
+            console.log('3.2 同时提供书名和ISBN，进行综合匹配');
             matchingBooks = books.filter(book => 
                 (book.title.toLowerCase().includes(bookTitle.toLowerCase()) || 
                  book.isbn === bookIsbn)
             );
         } else if (bookTitle) {
             // 只提供书名，模糊匹配
+            console.log('3.2 只提供书名，进行模糊匹配');
             matchingBooks = books.filter(book => 
                 book.title.toLowerCase().includes(bookTitle.toLowerCase())
             );
         } else if (bookIsbn) {
             // 只提供ISBN，精确匹配
+            console.log('3.2 只提供ISBN，进行精确匹配');
             matchingBooks = books.filter(book => 
                 book.isbn === bookIsbn
             );
         }
         
-        console.log('匹配的图书:', matchingBooks);
+        console.log('3.3 匹配到的图书数量:', matchingBooks.length);
+        console.log('3.3 匹配到的图书:', matchingBooks);
         
         // 提取匹配图书的ID
         const matchingBookIds = matchingBooks.map(book => book.id);
+        console.log('3.4 匹配图书的ID列表:', matchingBookIds);
         
         // 查找借阅记录
+        console.log('3.5 开始在借阅记录中查找匹配项');
         const record = borrowRecords.find(r => {
             const matchesStudentId = r.student_id === studentId;
             const matchesStudentName = r.student_name.toLowerCase().includes(studentName.toLowerCase());
             const matchesBookId = matchingBookIds.includes(r.book_id);
             const isBorrowed = r.return_date === null;
             
-            console.log('检查借阅记录:', {
-                record: r,
+            console.log('3.5.1 检查借阅记录:', {
+                recordId: r.id,
+                studentId: r.student_id,
+                studentName: r.student_name,
+                bookId: r.book_id,
+                bookTitle: r.book_title,
                 matchesStudentId,
                 matchesStudentName,
                 matchesBookId,
@@ -1452,55 +1477,86 @@ async function confirmReturn() {
             return matchesStudentId && matchesStudentName && matchesBookId && isBorrowed;
         });
         
-        console.log('找到的借阅记录:', record);
+        console.log('3.6 找到的借阅记录:', record);
         
         if (!record) {
+            console.log('3.7 未找到匹配的借阅记录，终止还书流程');
             alert('未找到该图书的借阅记录');
             return;
         }
         
+        console.log('4. 开始执行归还操作');
         // 执行归还
         const book = books.find(b => b.id === record.book_id);
         if (book) {
+            console.log('4.1 找到对应图书:', book);
+            
+            // 更新图书信息
+            console.log('4.2 更新图书可借数量，当前:', book.available, '更新后:', book.available + 1);
             book.available++;
             if (book.status === 'out') {
+                console.log('4.3 更新图书状态，从"out"改为"in"');
                 book.status = 'in';
             }
             
             const returnDate = new Date().toISOString().split('T')[0];
+            console.log('4.4 生成归还日期:', returnDate);
             
             // 使用Supabase服务保存数据
+            console.log('5. 开始保存数据到数据库');
+            
             // 1. 更新图书信息
+            console.log('5.1 更新图书信息:', book.id, {
+                available: book.available,
+                status: book.status
+            });
             await bookService.updateBook(book.id, {
                 available: book.available,
                 status: book.status
             });
+            console.log('5.1 图书信息更新成功');
             
             // 2. 更新借阅记录
+            console.log('5.2 更新借阅记录:', record.id, {
+                return_date: returnDate,
+                status: 'returned'
+            });
             await borrowRecordService.updateBorrowRecord(record.id, {
                 return_date: returnDate,
                 status: 'returned'
             });
+            console.log('5.2 借阅记录更新成功');
             
             // 3. 更新读者借阅次数
+            console.log('5.3 开始更新读者借阅次数');
             const student = readers.find(r => r.id === record.student_id);
             if (student) {
+                console.log('5.3.1 找到对应读者:', student.name);
+                console.log('5.3.1 更新借阅次数，当前:', student.borrow_count, '更新后:', student.borrow_count - 1);
                 student.borrow_count--;
                 await readerService.updateReader(record.student_id, {
                     borrow_count: student.borrow_count
                 });
+                console.log('5.3.2 读者借阅次数更新成功');
+            } else {
+                console.log('5.3.1 未找到对应读者，跳过借阅次数更新');
             }
             
             // 更新本地数据
+            console.log('6. 更新本地数据');
             record.return_date = returnDate;
             record.status = 'returned';
+            console.log('6.1 本地借阅记录更新成功');
             
             // 检查是否逾期
+            console.log('7. 检查是否逾期');
             const dueDate = new Date(record.due_date);
             const isOverdue = new Date(returnDate) > dueDate;
             const overdueDays = isOverdue ? Math.floor((new Date(returnDate) - dueDate) / (1000 * 60 * 60 * 24)) : 0;
+            console.log('7.1 逾期检查结果:', { isOverdue, overdueDays });
             
             // 更新界面显示
+            console.log('8. 更新界面显示');
             const returnStatus = document.getElementById('return-status');
             returnStatus.innerHTML = `
                 <div style="background: #e8f4f8; padding: 20px; border-radius: 10px; text-align: center;">
@@ -1514,9 +1570,12 @@ async function confirmReturn() {
                     ${isOverdue ? `<p style="color: #ff4757;">已逾期${overdueDays}天</p>` : ''}
                 </div>
             `;
+            console.log('8.1 界面更新成功');
             
             // 3秒后重置表单
+            console.log('9. 设置3秒后重置表单');
             setTimeout(() => {
+                console.log('9.1 重置表单和状态显示');
                 returnStatus.innerHTML = '';
                 document.getElementById('return-student-id').value = '';
                 document.getElementById('return-student-name').value = '';
@@ -1525,21 +1584,29 @@ async function confirmReturn() {
             }, 3000);
             
             // 刷新本地数据
+            console.log('10. 刷新本地数据');
             await initData();
+            console.log('10.1 本地数据刷新成功');
             
             // 更新管理员界面数据
             if (isAdmin) {
+                console.log('11. 更新管理员界面数据');
                 updateStats();
                 generateTextStats();
                 initBookList();
                 initReaderTree();
                 initRecordsList();
+                console.log('11.1 管理员界面数据更新成功');
             }
+            
+            console.log('=== 还书流程成功完成 ===');
         } else {
+            console.log('4.1 未找到对应图书，终止还书流程');
             alert('未找到对应图书');
         }
     } catch (error) {
-        console.error('还书失败:', error);
+        console.error('=== 还书流程异常 ===', error);
+        console.error('异常详情:', error.message, error.stack);
         alert('还书失败，请稍后重试');
     }
 }
