@@ -895,6 +895,76 @@ function showAdminPage(pageId) {
                 };
                 console.log('确认编辑按钮事件监听器绑定成功');
             }
+            
+            // 绑定搜索功能事件监听器
+            console.log('绑定图书搜索功能事件监听器');
+            const bookSearchInput = document.getElementById('book-search');
+            const bookSearchBtn = document.querySelector('#books .btn-search');
+            
+            // 搜索图书的函数
+            function searchBooks() {
+                const searchTerm = bookSearchInput.value.toLowerCase().trim();
+                console.log(`搜索图书: ${searchTerm}`);
+                
+                // 过滤图书列表
+                const filteredBooks = searchTerm ? books.filter(book => 
+                    book.title.toLowerCase().includes(searchTerm) || 
+                    book.author.toLowerCase().includes(searchTerm) || 
+                    book.isbn.toLowerCase().includes(searchTerm) ||
+                    (book.number && book.number.toLowerCase().includes(searchTerm))
+                ) : books;
+                
+                // 更新图书列表
+                const bookList = document.getElementById('book-list');
+                bookList.innerHTML = filteredBooks.map(book => `
+                    <div class="book-management-item">
+                        <div class="book-info">
+                            <h4>${book.title}</h4>
+                            ${book.number ? `<p>编号：${book.number}</p>` : ''}
+                            <p>作者：${book.author}</p>
+                            <p>ISBN：${book.isbn}</p>
+                            <p>分类：${book.category}</p>
+                            <p>出版社：${book.publisher}</p>
+                        </div>
+                        <div class="book-stats">
+                            <p>状态：${book.status === 'in' ? '在馆' : '借出'}</p>
+                            <p>可用：${book.available}</p>
+                            <p>总数：${book.copies || book.available}</p>
+                        </div>
+                        <div class="book-actions">
+                            <button class="btn btn-small btn-edit" data-book-id="${book.id}">编辑</button>
+                            <button class="btn btn-small btn-delete" data-book-id="${book.id}">删除</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // 重新绑定事件委托处理编辑和删除按钮点击事件
+                bookList.addEventListener('click', function(e) {
+                    if (e.target.classList.contains('btn-edit')) {
+                        const bookId = parseInt(e.target.getAttribute('data-book-id'));
+                        editBook(bookId);
+                    } else if (e.target.classList.contains('btn-delete')) {
+                        const bookId = parseInt(e.target.getAttribute('data-book-id'));
+                        deleteBook(bookId);
+                    }
+                });
+            }
+            
+            // 绑定搜索按钮点击事件
+            if (bookSearchBtn) {
+                bookSearchBtn.onclick = searchBooks;
+                console.log('图书搜索按钮事件监听器绑定成功');
+            }
+            
+            // 绑定搜索输入框回车事件
+            if (bookSearchInput) {
+                bookSearchInput.onkeypress = function(e) {
+                    if (e.key === 'Enter') {
+                        searchBooks();
+                    }
+                };
+                console.log('图书搜索输入框回车事件监听器绑定成功');
+            }
         }, 100);
     }
     
@@ -1217,9 +1287,11 @@ async function confirmBorrow() {
         }
         
         // 检查借阅数量限制
+        // 获取系统设置中的最大借阅数量
+        const maxBorrowQuantity = parseInt(document.getElementById('max-borrow-quantity')?.value || 5);
         const currentBorrows = borrowRecords.filter(r => r.student_id === studentId && r.return_date === null);
-        if (currentBorrows.length >= 5) {
-            alert('已达到最大借阅数量（5本）');
+        if (currentBorrows.length >= maxBorrowQuantity) {
+            alert(`已达到最大借阅数量（${maxBorrowQuantity}本）`);
             return;
         }
         
@@ -1310,11 +1382,17 @@ async function confirmBorrow() {
 // 改进的还书功能
 async function confirmReturn() {
     const studentId = document.getElementById('return-student-id').value;
+    const studentName = document.getElementById('return-student-name').value;
     const bookTitle = document.getElementById('return-book-title').value;
     const bookIsbn = document.getElementById('return-book-isbn').value;
     
     if (!studentId) {
         alert('请输入学号');
+        return;
+    }
+    
+    if (!studentName) {
+        alert('请输入姓名');
         return;
     }
     
@@ -1327,9 +1405,12 @@ async function confirmReturn() {
         // 查找借阅记录
         const record = borrowRecords.find(r => {
             const matchesStudentId = r.student_id === studentId;
+            const matchesStudentName = r.student_name === studentName;
             const matchesTitle = bookTitle && r.book_title.toLowerCase().includes(bookTitle.toLowerCase());
-            const matchesIsbn = bookIsbn && r.book_id.toString() === bookIsbn;
-            return matchesStudentId && (matchesTitle || matchesIsbn) && r.return_date === null;
+            // 查找对应图书，然后匹配ISBN
+            const book = books.find(b => b.id === r.book_id);
+            const matchesIsbn = book && bookIsbn && book.isbn === bookIsbn;
+            return matchesStudentId && matchesStudentName && (matchesTitle || matchesIsbn) && r.return_date === null;
         });
         
         if (!record) {
@@ -1339,78 +1420,83 @@ async function confirmReturn() {
         
         // 执行归还
         const book = books.find(b => b.id === record.book_id);
-        book.available++;
-        if (book.status === 'out') {
-            book.status = 'in';
-        }
-        
-        const returnDate = new Date().toISOString().split('T')[0];
-        
-        // 使用Supabase服务保存数据
-        // 1. 更新图书信息
-        await bookService.updateBook(book.id, {
-            available: book.available,
-            status: book.status
-        });
-        
-        // 2. 更新借阅记录
-        await borrowRecordService.updateBorrowRecord(record.id, {
-            return_date: returnDate,
-            status: 'returned'
-        });
-        
-        // 3. 更新读者借阅次数
-        const student = readers.find(r => r.id === record.student_id);
-        if (student) {
-            student.borrow_count--;
-            await readerService.updateReader(record.student_id, {
-                borrow_count: student.borrow_count
+        if (book) {
+            book.available++;
+            if (book.status === 'out') {
+                book.status = 'in';
+            }
+            
+            const returnDate = new Date().toISOString().split('T')[0];
+            
+            // 使用Supabase服务保存数据
+            // 1. 更新图书信息
+            await bookService.updateBook(book.id, {
+                available: book.available,
+                status: book.status
             });
+            
+            // 2. 更新借阅记录
+            await borrowRecordService.updateBorrowRecord(record.id, {
+                return_date: returnDate,
+                status: 'returned'
+            });
+            
+            // 3. 更新读者借阅次数
+            const student = readers.find(r => r.id === record.student_id);
+            if (student) {
+                student.borrow_count--;
+                await readerService.updateReader(record.student_id, {
+                    borrow_count: student.borrow_count
+                });
+            }
+            
+            // 更新本地数据
+            record.return_date = returnDate;
+            record.status = 'returned';
+            
+            // 检查是否逾期
+            const dueDate = new Date(record.due_date);
+            const isOverdue = new Date(returnDate) > dueDate;
+            const overdueDays = isOverdue ? Math.floor((new Date(returnDate) - dueDate) / (1000 * 60 * 60 * 24)) : 0;
+            
+            // 更新界面显示
+            const returnStatus = document.getElementById('return-status');
+            returnStatus.innerHTML = `
+                <div style="background: #e8f4f8; padding: 20px; border-radius: 10px; text-align: center;">
+                    <i class="fas fa-check-circle" style="font-size: 48px; color: #27ae60; margin-bottom: 15px;"></i>
+                    <h3>还书成功！</h3>
+                    <p><strong>书名：</strong>${record.book_title}</p>
+                    <p><strong>借阅人：</strong>${record.student_name}</p>
+                    <p><strong>借阅日期：</strong>${record.borrow_date}</p>
+                    <p><strong>到期日期：</strong>${record.due_date}</p>
+                    <p><strong>归还日期：</strong>${record.return_date}</p>
+                    ${isOverdue ? `<p style="color: #ff4757;">已逾期${overdueDays}天</p>` : ''}
+                </div>
+            `;
+            
+            // 3秒后重置表单
+            setTimeout(() => {
+                returnStatus.innerHTML = '';
+                document.getElementById('return-student-id').value = '';
+                document.getElementById('return-student-name').value = '';
+                document.getElementById('return-book-title').value = '';
+                document.getElementById('return-book-isbn').value = '';
+            }, 3000);
+            
+            // 刷新本地数据
+            await initData();
+            
+            // 更新管理员界面数据
+            if (isAdmin) {
+                updateStats();
+                generateTextStats();
+                initBookList();
+                initReaderTree();
+                initRecordsList();
+            }
+        } else {
+            alert('未找到对应图书');
         }
-        
-        // 更新本地数据
-        record.return_date = returnDate;
-        record.status = 'returned';
-        
-        // 检查是否逾期
-        const dueDate = new Date(record.due_date);
-        const isOverdue = new Date(returnDate) > dueDate;
-        const overdueDays = isOverdue ? Math.floor((new Date(returnDate) - dueDate) / (1000 * 60 * 60 * 24)) : 0;
-        
-        // 更新界面显示
-        const returnStatus = document.getElementById('return-status');
-        returnStatus.innerHTML = `
-            <div style="background: #e8f4f8; padding: 20px; border-radius: 10px; text-align: center;">
-                <i class="fas fa-check-circle" style="font-size: 48px; color: #27ae60; margin-bottom: 15px;"></i>
-                <h3>还书成功！</h3>
-                <p><strong>书名：</strong>${record.book_title}</p>
-                <p><strong>借阅人：</strong>${record.student_name}</p>
-                <p><strong>借阅日期：</strong>${record.borrow_date}</p>
-                <p><strong>到期日期：</strong>${record.due_date}</p>
-                <p><strong>归还日期：</strong>${record.return_date}</p>
-                ${isOverdue ? `<p style="color: #ff4757;">已逾期${overdueDays}天</p>` : ''}
-            </div>
-        `;
-        
-        // 3秒后重置表单
-        setTimeout(() => {
-            returnStatus.innerHTML = '';
-            document.getElementById('return-book-title').value = '';
-            document.getElementById('return-book-isbn').value = '';
-        }, 3000);
-        
-        // 刷新本地数据
-        await initData();
-        
-        // 更新管理员界面数据
-        if (isAdmin) {
-            updateStats();
-            generateTextStats();
-            initBookList();
-            initReaderTree();
-            initRecordsList();
-        }
-        
     } catch (error) {
         console.error('还书失败:', error);
         alert('还书失败，请稍后重试');
