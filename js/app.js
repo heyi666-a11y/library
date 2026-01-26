@@ -1386,6 +1386,8 @@ async function confirmReturn() {
     const bookTitle = document.getElementById('return-book-title').value;
     const bookIsbn = document.getElementById('return-book-isbn').value;
     
+    console.log('确认还书参数:', { studentId, studentName, bookTitle, bookIsbn });
+    
     if (!studentId) {
         alert('请输入学号');
         return;
@@ -1403,15 +1405,54 @@ async function confirmReturn() {
     
     try {
         // 查找借阅记录
+        console.log('当前借阅记录:', borrowRecords);
+        
+        // 先查找匹配的图书
+        let matchingBooks = [];
+        
+        // 综合书名和ISBN进行匹配
+        if (bookTitle && bookIsbn) {
+            // 同时提供书名和ISBN，需要同时匹配
+            matchingBooks = books.filter(book => 
+                (book.title.toLowerCase().includes(bookTitle.toLowerCase()) || 
+                 book.isbn === bookIsbn)
+            );
+        } else if (bookTitle) {
+            // 只提供书名，模糊匹配
+            matchingBooks = books.filter(book => 
+                book.title.toLowerCase().includes(bookTitle.toLowerCase())
+            );
+        } else if (bookIsbn) {
+            // 只提供ISBN，精确匹配
+            matchingBooks = books.filter(book => 
+                book.isbn === bookIsbn
+            );
+        }
+        
+        console.log('匹配的图书:', matchingBooks);
+        
+        // 提取匹配图书的ID
+        const matchingBookIds = matchingBooks.map(book => book.id);
+        
+        // 查找借阅记录
         const record = borrowRecords.find(r => {
             const matchesStudentId = r.student_id === studentId;
-            const matchesStudentName = r.student_name === studentName;
-            const matchesTitle = bookTitle && r.book_title.toLowerCase().includes(bookTitle.toLowerCase());
-            // 查找对应图书，然后匹配ISBN
-            const book = books.find(b => b.id === r.book_id);
-            const matchesIsbn = book && bookIsbn && book.isbn === bookIsbn;
-            return matchesStudentId && matchesStudentName && (matchesTitle || matchesIsbn) && r.return_date === null;
+            const matchesStudentName = r.student_name.toLowerCase().includes(studentName.toLowerCase());
+            const matchesBookId = matchingBookIds.includes(r.book_id);
+            const isBorrowed = r.return_date === null;
+            
+            console.log('检查借阅记录:', {
+                record: r,
+                matchesStudentId,
+                matchesStudentName,
+                matchesBookId,
+                isBorrowed
+            });
+            
+            return matchesStudentId && matchesStudentName && matchesBookId && isBorrowed;
         });
+        
+        console.log('找到的借阅记录:', record);
         
         if (!record) {
             alert('未找到该图书的借阅记录');
